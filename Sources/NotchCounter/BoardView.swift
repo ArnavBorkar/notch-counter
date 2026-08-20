@@ -8,6 +8,7 @@ struct BoardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
+            TasksLeftRail(app: app)
             VStack(alignment: .leading, spacing: 10) {
                 composer
                 HStack(alignment: .top, spacing: 10) {
@@ -123,8 +124,51 @@ struct TaskCard: View {
     @ObservedObject var app: AppState
     let task: BoardTask
     @State private var hovering = false
+    @State private var confirmingDelete = false
 
     var body: some View {
+        Group {
+            if confirmingDelete { deleteConfirmation } else { card }
+        }
+        .padding(9)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(confirmingDelete ? Palette.danger.opacity(0.16)
+                                       : (hovering ? Palette.cardHover : Palette.card))
+        )
+        .overlay(alignment: .leading) {
+            if task.important, !confirmingDelete {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Palette.star)
+                    .frame(width: 2.5)
+                    .padding(.vertical, 6)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .onHover { hovering = $0 }
+        .draggable(task.id.uuidString)
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(.easeOut(duration: 0.16), value: confirmingDelete)
+    }
+
+    private var deleteConfirmation: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Delete this task?")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.9))
+            Text(task.title)
+                .font(.system(size: 11, design: .rounded))
+                .foregroundStyle(Palette.dim)
+                .lineLimit(1)
+            HStack(spacing: 8) {
+                PillButton(title: "Cancel") { confirmingDelete = false }
+                PillButton(title: "Delete", tint: Palette.danger) { app.delete(task) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(task.title)
                 .font(.system(size: 12.5, design: .rounded))
@@ -153,27 +197,101 @@ struct TaskCard: View {
                     if let next = task.status.next {
                         IconButton(symbol: "arrow.right", size: 18) { app.move(task, to: next) }
                     }
-                    IconButton(symbol: "trash", size: 18, tint: Palette.danger) { app.delete(task) }
+                    IconButton(symbol: "trash", size: 18, tint: Palette.danger) {
+                        confirmingDelete = true
+                    }
                 }
             }
         }
-        .padding(9)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(hovering ? Palette.cardHover : Palette.card)
-        )
-        .overlay(alignment: .leading) {
-            if task.important {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Palette.star)
-                    .frame(width: 2.5)
-                    .padding(.vertical, 6)
+    }
+}
+
+/// Mirror of the outreach rail: what's still on the team's plate.
+struct TasksLeftRail: View {
+    @ObservedObject var app: AppState
+
+    private var open: Int { app.tasks.filter { $0.status != .done }.count }
+    private var done: Int { app.tasks.filter { $0.status == .done }.count }
+    private var mine: Int {
+        guard let me = app.me else { return 0 }
+        return app.tasks.filter { $0.status != .done && $0.assigneeID == me.id }.count
+    }
+    private var progress: Double {
+        let total = open + done
+        return total == 0 ? 0 : Double(done) / Double(total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Tasks left today")
+                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                .foregroundStyle(Palette.dim)
+                .textCase(.uppercase)
+                .kerning(0.4)
+
+            Spacer(minLength: 8)
+
+            VStack(spacing: 10) {
+                Text("\(open)")
+                    .font(.system(size: 52, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .contentTransition(.numericText(value: Double(open)))
+
+                Text(open == 0 ? "board's clear" : "across the team")
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundStyle(Palette.dim)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.08))
+                        Capsule().fill(Palette.accent)
+                            .frame(width: max(0, proxy.size.width * progress))
+                    }
+                }
+                .frame(height: 5)
+                .padding(.horizontal, 2)
             }
+            .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 8)
+
+            Divider().overlay(Palette.hairline)
+
+            statRow("Backlog", app.tasks(in: .backlog).count)
+            statRow("In progress", app.tasks(in: .doing).count)
+            statRow("Done", done)
+
+            Divider().overlay(Palette.hairline)
+
+            HStack(spacing: 6) {
+                Avatar(user: app.me, size: 20)
+                Text("On you")
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundStyle(Palette.dim)
+                Spacer(minLength: 0)
+                Text("\(mine)")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            .padding(.top, 8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .onHover { hovering = $0 }
-        .draggable(task.id.uuidString)
-        .animation(.easeOut(duration: 0.12), value: hovering)
+        .frame(width: 158)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.column))
+    }
+
+    private func statRow(_ label: String, _ value: Int) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 11, design: .rounded))
+                .foregroundStyle(Palette.dim)
+            Spacer()
+            Text("\(value)")
+                .font(.system(size: 11.5, weight: .medium, design: .rounded).monospacedDigit())
+                .foregroundStyle(.white.opacity(0.75))
+        }
+        .padding(.vertical, 5)
     }
 }
 

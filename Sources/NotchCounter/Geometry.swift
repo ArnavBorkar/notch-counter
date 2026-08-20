@@ -33,7 +33,7 @@ struct NotchGeometry {
         case .setup:
             return CGSize(width: 520, height: notchHeight + 196)
         case .board:
-            return CGSize(width: min(1080, screen.frame.width - 96),
+            return CGSize(width: min(1240, screen.frame.width - 96),
                           height: notchHeight + 468)
         }
     }

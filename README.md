@@ -17,10 +17,16 @@ Idle, it widens the notch a little to the right and shows how many people you've
 reached out to today. It never reaches below the menu bar, so it can't cover
 anything in the app underneath.
 
-Hover it and the whole board drops down: three columns, everyone's tasks, and
-your counter on the right. The board is shared — every person running the app
-against the same database sees the same cards, and changes show up within a few
-seconds.
+Hover it and the whole board drops down. The board is shared — every person
+running the app against the same database sees the same cards, and changes show
+up within a few seconds.
+
+<p align="center">
+  <img src="docs/board.png" width="900" alt="The board">
+</p>
+
+Tasks left on the team's plate down the left, three columns in the middle, your
+outreach counter on the right.
 
 ## What's in it
 
@@ -29,8 +35,16 @@ seconds.
 - **Star anything important** — starred cards sort to the top of their column and
   get a gold edge. No separate bucket to keep in sync.
 - **Assign to a teammate** — click the avatar on a card.
+- **Deleting asks first** — the card flips to a confirmation instead of
+  vanishing under the pointer.
+- **Tasks left today** — the left rail counts everything not yet Done across the
+  team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
   confirmation before reset. The panel also shows the team's total for the day.
+- **A nudge** — once a minute the idle number turns into a face, blinks, and
+  smiles at you, so outreach doesn't quietly fall off the day.
+  <img src="docs/nudge.png" width="60" align="center" alt="the nudge face">
+  Turn it off by right-clicking the notch.
 - **Accounts** — email and a 4-digit PIN. Anyone can create one.
 
 Everything lives in Postgres (a free Neon database works well). The count is
@@ -129,7 +143,12 @@ pins it open until you press Esc or click away.
 
 **Writes are optimistic.** The UI updates immediately, the query goes out, and
 the next poll reconciles. Polling is every 3 s while the panel is open, 25 s
-while it's closed.
+while it's closed — and opening the panel forces a refresh, so a hover never
+shows you a board that's 25 s stale.
+
+**Avatar colours are hashed from the UUID's bytes**, not `hashValue` — that one
+is seeded per process, so everyone would change colour on every launch and look
+different on each teammate's Mac.
 
 **`Menu` labels flatten custom backgrounds** on macOS, which ate the avatar
 colours — the assignee picker pops an `NSMenu` from a plain button instead.

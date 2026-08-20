@@ -16,6 +16,9 @@ final class AppState: ObservableObject {
     @Published var pinned = false          // clicked into the panel — stays open
     @Published var confirmingReset = false
     @Published var banner: String?
+    /// The idle number is briefly a face, to pull your eye back to outreach.
+    @Published var winking = false
+    @Published private(set) var nudgesEnabled = UserDefaults.standard.object(forKey: "nudges.enabled") as? Bool ?? true
 
     // Data
     @Published var me: BoardUser?
@@ -26,6 +29,7 @@ final class AppState: ObservableObject {
 
     private var db: Database?
     private var poller: Task<Void, Never>?
+    private var nudger: Task<Void, Never>?
     private let sessionKey = "session.userID"
 
     var expanded: Bool { isOpen || pinned }
@@ -35,6 +39,27 @@ final class AppState: ObservableObject {
             connect(to: url, remember: false)
         } else {
             phase = .setup
+        }
+        startNudging()
+    }
+
+    func toggleNudges() {
+        nudgesEnabled.toggle()
+        UserDefaults.standard.set(nudgesEnabled, forKey: "nudges.enabled")
+        if !nudgesEnabled { winking = false }
+    }
+
+    private func startNudging() {
+        nudger?.cancel()
+        nudger = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                guard let self, !Task.isCancelled else { return }
+                guard self.nudgesEnabled, !self.expanded, self.phase == .board else { continue }
+                self.winking = true
+                try? await Task.sleep(for: .seconds(2.6))
+                self.winking = false
+            }
         }
     }
 
@@ -126,6 +151,12 @@ final class AppState: ObservableObject {
                 await self.refresh()
             }
         }
+    }
+
+    /// Opening the panel shouldn't show you a board that's up to 25s stale.
+    func panelDidOpen() {
+        guard phase == .board else { return }
+        Task { await refresh() }
     }
 
     func refresh() async {

@@ -39,11 +39,20 @@ struct NotchView: View {
     private var idle: some View {
         HStack(spacing: 0) {
             Color.clear.frame(width: Style.topFlare + geo.notchWidth)
-            Text(app.me == nil ? "–" : "\(app.myCount)")
-                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle(.white)
-                .contentTransition(.numericText())
-                .frame(width: geo.tail)
+            Group {
+                if app.winking {
+                    NudgeFace()
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                } else {
+                    Text(app.me == nil ? "–" : "\(app.myCount)")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText())
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
+            }
+            .frame(width: geo.tail)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: app.winking)
             Spacer(minLength: 0)
         }
         .frame(height: geo.notchHeight)

@@ -12,11 +12,22 @@ final class PassthroughContainer: NSView {
         return super.hitTest(point)
     }
 
+    var nudgesEnabled: () -> Bool = { true }
+    var toggleNudges: () -> Void = {}
+
     override func rightMouseDown(with event: NSEvent) {
         let menu = NSMenu()
+        let nudge = NSMenuItem(title: "Nudge me every minute",
+                               action: #selector(flipNudges), keyEquivalent: "")
+        nudge.target = self
+        nudge.state = nudgesEnabled() ? .on : .off
+        menu.addItem(nudge)
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Notch Counter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
+
+    @objc private func flipNudges() { toggleNudges() }
 }
 
 final class NotchPanel: NSPanel {
@@ -72,6 +83,8 @@ final class NotchWindowController {
         hosting.autoresizingMask = [.width, .height]
         container.addSubview(hosting)
 
+        container.nudgesEnabled = { [weak app] in app?.nudgesEnabled ?? true }
+        container.toggleNudges = { [weak app] in app?.toggleNudges() }
         panel.contentView = container
         panel.setFrame(geo.windowFrame, display: true)
         panel.orderFrontRegardless()
@@ -174,6 +187,7 @@ final class NotchWindowController {
             if insideSince == nil { insideSince = now }
             if !app.isOpen, now.timeIntervalSince(insideSince ?? now) >= openDelay {
                 app.isOpen = true
+                app.panelDidOpen()
                 updateActiveRect()
             }
         } else {

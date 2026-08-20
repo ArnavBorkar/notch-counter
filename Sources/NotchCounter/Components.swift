@@ -9,6 +9,18 @@ enum Palette {
     static let star = Color(red: 1.0, green: 0.78, blue: 0.28)
     static let danger = Color(red: 0.92, green: 0.28, blue: 0.26)
     static let accent = Color(red: 0.36, green: 0.62, blue: 1.0)
+
+    /// Fixed set so a person is the same colour on everyone's Mac, every launch.
+    static let avatars: [Color] = [
+        Color(red: 0.35, green: 0.66, blue: 0.98),   // blue
+        Color(red: 0.36, green: 0.76, blue: 0.52),   // green
+        Color(red: 0.95, green: 0.60, blue: 0.28),   // orange
+        Color(red: 0.78, green: 0.50, blue: 0.94),   // purple
+        Color(red: 0.94, green: 0.44, blue: 0.52),   // rose
+        Color(red: 0.30, green: 0.74, blue: 0.78),   // teal
+        Color(red: 0.86, green: 0.72, blue: 0.30),   // gold
+        Color(red: 0.56, green: 0.60, blue: 0.94),   // indigo
+    ]
 }
 
 struct Avatar: View {
@@ -32,10 +44,15 @@ struct Avatar: View {
     }
 
     /// Stable colour per person, so faces are recognisable at a glance.
+    /// Hashed from the UUID's bytes, not `hashValue` — that one is seeded per
+    /// process, so it would repaint everyone on every launch.
     private var tint: Color {
         guard let user else { return .gray }
-        let hue = Double(abs(user.id.hashValue % 360)) / 360
-        return Color(hue: hue, saturation: 0.55, brightness: 0.72)
+        var acc = 0
+        withUnsafeBytes(of: user.id.uuid) { bytes in
+            for byte in bytes { acc = (acc &* 31 &+ Int(byte)) & 0xFFFFFF }
+        }
+        return Palette.avatars[acc % Palette.avatars.count]
     }
 }
 
@@ -175,4 +192,58 @@ final class MenuHandler: NSObject {
     private let action: (Any?) -> Void
     init(action: @escaping (Any?) -> Void) { self.action = action }
     @objc func fire(_ sender: NSMenuItem) { action(sender.representedObject) }
+}
+
+/// The nudge: every so often the idle number turns into a little face, blinks,
+/// and smiles at you. Cheap way to catch your eye from the menu bar.
+struct NudgeFace: View {
+    @State private var blink = false
+    @State private var smile = false
+    @State private var glance: CGFloat = 0
+
+    var body: some View {
+        VStack(spacing: 3.5) {
+            HStack(spacing: 6.5) {
+                eye
+                eye
+            }
+            .offset(x: glance)
+
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 1))
+                path.addQuadCurve(to: CGPoint(x: 15, y: 1),
+                                  control: CGPoint(x: 7.5, y: smile ? 8 : 1.5))
+            }
+            .stroke(Color.white, style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            .frame(width: 15, height: 8)
+        }
+        .task { await perform() }
+    }
+
+    private var eye: some View {
+        Capsule()
+            .fill(Color.white)
+            .frame(width: 4.5, height: blink ? 1.2 : 5.5)
+    }
+
+    private func perform() async {
+        func pause(_ ms: UInt64) async { try? await Task.sleep(for: .milliseconds(ms)) }
+
+        await pause(180)
+        withAnimation(.easeOut(duration: 0.22)) { smile = true }
+        await pause(320)
+        withAnimation(.easeInOut(duration: 0.09)) { blink = true }
+        await pause(90)
+        withAnimation(.easeInOut(duration: 0.09)) { blink = false }
+        await pause(280)
+        withAnimation(.easeInOut(duration: 0.45)) { glance = 2.5 }
+        await pause(450)
+        withAnimation(.easeInOut(duration: 0.45)) { glance = -2.5 }
+        await pause(450)
+        withAnimation(.easeInOut(duration: 0.3)) { glance = 0 }
+        await pause(150)
+        withAnimation(.easeInOut(duration: 0.09)) { blink = true }
+        await pause(90)
+        withAnimation(.easeInOut(duration: 0.09)) { blink = false }
+    }
 }
