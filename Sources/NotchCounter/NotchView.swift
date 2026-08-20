@@ -11,9 +11,10 @@ struct NotchView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            // No drop shadow: it bleeds past the rounded corners and reads as a
+            // smudged band down each side over light windows.
             NotchShape(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
                 .fill(Color.black)
-                .shadow(color: .black.opacity(app.expanded ? 0.55 : 0), radius: 18, y: 8)
             content
         }
         .frame(width: size.width, height: size.height)
