@@ -57,6 +57,7 @@ final class AppState: ObservableObject {
                 guard let self, !Task.isCancelled else { return }
                 guard self.nudgesEnabled, !self.expanded, self.phase == .board else { continue }
                 self.winking = true
+                Haptics.nudge()
                 try? await Task.sleep(for: .seconds(2.6))
                 self.winking = false
             }
@@ -112,6 +113,7 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(user.id.uuidString, forKey: sessionKey)
             me = user
             phase = .board
+            Haptics.success()
             await refresh()
         } catch {
             banner = error.localizedDescription
@@ -125,6 +127,7 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(user.id.uuidString, forKey: sessionKey)
             me = user
             phase = .board
+            Haptics.success()
             await refresh()
         } catch {
             banner = error.localizedDescription
@@ -185,12 +188,14 @@ final class AppState: ObservableObject {
                                    assigneeID: assignee, position: .greatestFiniteMagnitude,
                                    createdAt: Date())
         tasks.append(optimistic)
+        Haptics.add()
         run { try await db.addTask(title: title, status: .backlog, assignee: assignee, createdBy: me.id) }
     }
 
     func move(_ task: BoardTask, to status: TaskStatus) {
         guard let db, status != task.status else { return }
         if let i = tasks.firstIndex(where: { $0.id == task.id }) { tasks[i].status = status }
+        Haptics.move()
         run { try await db.move(task.id, to: status) }
     }
 
@@ -198,6 +203,7 @@ final class AppState: ObservableObject {
         guard let db else { return }
         let flag = !task.important
         if let i = tasks.firstIndex(where: { $0.id == task.id }) { tasks[i].important = flag }
+        Haptics.star()
         run { try await db.setImportant(task.id, flag) }
     }
 
@@ -210,6 +216,7 @@ final class AppState: ObservableObject {
     func delete(_ task: BoardTask) {
         guard let db else { return }
         tasks.removeAll { $0.id == task.id }
+        Haptics.destroy()
         run { try await db.delete(task.id) }
     }
 
@@ -219,6 +226,7 @@ final class AppState: ObservableObject {
         guard let db, let me else { return }
         myCount = max(0, myCount + delta)
         teamCounts[me.id] = myCount
+        Haptics.tick()
         run { _ = try await db.bumpOutreach(for: me.id, by: delta) }
     }
 
@@ -227,10 +235,14 @@ final class AppState: ObservableObject {
         myCount = 0
         teamCounts[me.id] = 0
         confirmingReset = false
+        Haptics.destroy()
         run { _ = try await db.resetOutreach(for: me.id) }
     }
 
     var teamTotal: Int { teamCounts.values.reduce(0, +) }
+
+    /// What the team still owes today — mirrored in the notch, left of the camera.
+    var tasksLeft: Int { tasks.filter { $0.status != .done }.count }
 
     func tasks(in status: TaskStatus) -> [BoardTask] {
         tasks.filter { $0.status == status }

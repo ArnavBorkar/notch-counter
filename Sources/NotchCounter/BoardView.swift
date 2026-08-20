@@ -198,6 +198,7 @@ struct TaskCard: View {
                         IconButton(symbol: "arrow.right", size: 18) { app.move(task, to: next) }
                     }
                     IconButton(symbol: "trash", size: 18, tint: Palette.danger) {
+                        Haptics.warn()
                         confirmingDelete = true
                     }
                 }
@@ -210,7 +211,7 @@ struct TaskCard: View {
 struct TasksLeftRail: View {
     @ObservedObject var app: AppState
 
-    private var open: Int { app.tasks.filter { $0.status != .done }.count }
+    private var open: Int { app.tasksLeft }
     private var done: Int { app.tasks.filter { $0.status == .done }.count }
     private var mine: Int {
         guard let me = app.me else { return 0 }
@@ -332,7 +333,7 @@ struct OutreachRail: View {
                         CircleButton(symbol: "plus") { app.bump(1) }
                     }
 
-                    Button { app.confirmingReset = true } label: {
+                    Button { Haptics.warn(); app.confirmingReset = true } label: {
                         Text("Reset")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Palette.dim)

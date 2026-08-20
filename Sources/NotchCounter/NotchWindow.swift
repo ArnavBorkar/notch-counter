@@ -22,12 +22,25 @@ final class PassthroughContainer: NSView {
         nudge.target = self
         nudge.state = nudgesEnabled() ? .on : .off
         menu.addItem(nudge)
+
+        let haptics = NSMenuItem(title: "Trackpad haptics", action: #selector(flipHaptics), keyEquivalent: "")
+        haptics.target = self
+        haptics.state = Haptics.enabled ? .on : .off
+        menu.addItem(haptics)
+
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Notch Counter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
     @objc private func flipNudges() { toggleNudges() }
+
+    @objc private func flipHaptics() {
+        MainActor.assumeIsolated {
+            Haptics.setEnabled(!Haptics.enabled)
+            if Haptics.enabled { Haptics.success() }
+        }
+    }
 }
 
 final class NotchPanel: NSPanel {
@@ -187,6 +200,7 @@ final class NotchWindowController {
             if insideSince == nil { insideSince = now }
             if !app.isOpen, now.timeIntervalSince(insideSince ?? now) >= openDelay {
                 app.isOpen = true
+                Haptics.expand()
                 app.panelDidOpen()
                 updateActiveRect()
             }
@@ -196,6 +210,7 @@ final class NotchWindowController {
             if outsideSince == nil { outsideSince = now }
             if app.isOpen, now.timeIntervalSince(outsideSince ?? now) >= closeDelay {
                 app.isOpen = false
+                Haptics.collapse()
                 app.confirmingReset = false
                 updateActiveRect()
             }

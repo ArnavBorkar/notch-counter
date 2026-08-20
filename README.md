@@ -13,9 +13,9 @@
   <img src="docs/idle.png" width="420" alt="Idle state">
 </p>
 
-Idle, it widens the notch a little to the right and shows how many people you've
-reached out to today. It never reaches below the menu bar, so it can't cover
-anything in the app underneath.
+Idle, it widens the notch both ways: tasks the team still owes on the left, how
+many people you've reached out to today on the right. It never reaches below the
+menu bar, so it can't cover anything in the app underneath.
 
 Hover it and the whole board drops down. The board is shared — every person
 running the app against the same database sees the same cards, and changes show
@@ -45,6 +45,10 @@ outreach counter on the right.
   brows down, and glares at you until you get back to outreach.
   <img src="docs/nudge.png" width="52" align="center" alt="the nudge face">
   Turn it off by right-clicking the notch.
+- **Haptics on everything** — the panel lands with a double thunk, the counter
+  ticks, moving a card gives a rising pair, deleting buzzes twice, and the nudge
+  stutters. macOS only exposes three feedback patterns, so the character comes
+  from how they're sequenced. Right-click the notch to turn them off.
 - **Accounts** — email and a 4-digit PIN. Anyone can create one.
 
 Everything lives in Postgres (a free Neon database works well). The count is
@@ -127,6 +131,7 @@ NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" 
 | [`Database.swift`](Sources/NotchCounter/Database.swift) | Every query, over PostgresNIO. Swap this file to move behind an API. |
 | [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
 | [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the outreach rail. |
+| [`Haptics.swift`](Sources/NotchCounter/Haptics.swift) | Every buzz, and the sequences that give each action its own feel. |
 | [`Tools/make-icon.swift`](Tools/make-icon.swift) | Draws `AppIcon.icns` from scratch with Core Graphics. |
 
 Details worth knowing if you're reading the code:

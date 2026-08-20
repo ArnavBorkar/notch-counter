@@ -15,13 +15,15 @@ struct NotchGeometry {
     let notchWidth: CGFloat
     /// Height of the menu bar / notch strip.
     let notchHeight: CGFloat
-    /// How far the idle shape reaches past the right edge of the notch — where the number sits.
+    /// How far the idle shape reaches past the right edge of the notch — today's outreach.
     let tail: CGFloat = 46
+    /// …and past the left edge — tasks still open across the team.
+    let leadingTail: CGFloat = 46
 
-    /// Idle: the notch, widened to the right. Never taller than the menu bar,
+    /// Idle: the notch, widened both ways. Never taller than the menu bar,
     /// so it can't cover anything in the app below.
     var closedSize: CGSize {
-        CGSize(width: notchWidth + tail + 2 * Style.topFlare, height: notchHeight)
+        CGSize(width: leadingTail + notchWidth + tail + 2 * Style.topFlare, height: notchHeight)
     }
 
     func openSize(_ mode: PanelMode) -> CGSize {
@@ -62,7 +64,7 @@ struct NotchGeometry {
         let size = open ? openSize(mode) : closedSize
         let x = open
             ? f.midX - size.width / 2
-            : f.midX - notchWidth / 2 - Style.topFlare      // straight left edge meets the notch edge
+            : f.midX - notchWidth / 2 - leadingTail - Style.topFlare
         return NSRect(x: x, y: f.maxY - size.height, width: size.width, height: size.height)
     }
 
