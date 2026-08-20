@@ -5,6 +5,11 @@ struct NotchShape: Shape {
     var topFlare: CGFloat = Style.topFlare
     var bottomRadius: CGFloat = Style.bottomRadius
 
+    var animatableData: CGFloat {
+        get { bottomRadius }
+        set { bottomRadius = newValue }
+    }
+
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
         let flare = min(topFlare, w / 2)

@@ -5,47 +5,85 @@
 <h1 align="center">Notch Counter</h1>
 
 <p align="center">
-  A minimal counter that lives in the MacBook notch.<br>
-  Inspired by <a href="https://github.com/TheBoredTeam/boring.notch">TheBoringNotch</a> — but instead of a smiley, it shows a number.
+  A shared kanban board and a daily outreach counter, living in the MacBook notch.<br>
+  Inspired by <a href="https://github.com/TheBoredTeam/boring.notch">TheBoringNotch</a> — but instead of a smiley, it shows your number.
 </p>
 
 <p align="center">
   <img src="docs/idle.png" width="420" alt="Idle state">
 </p>
 
-Idle, it widens the notch a little to the right and shows the count. It never
-reaches below the menu bar, so it can't cover anything in the app underneath.
+Idle, it widens the notch a little to the right and shows how many people you've
+reached out to today. It never reaches below the menu bar, so it can't cover
+anything in the app underneath.
 
-<p align="center">
-  <img src="docs/hover.png" width="330" alt="Hovered state">
-  &nbsp;&nbsp;
-  <img src="docs/confirm.png" width="330" alt="Reset confirmation">
-</p>
+Hover it and the whole board drops down: three columns, everyone's tasks, and
+your counter on the right. The board is shared — every person running the app
+against the same database sees the same cards, and changes show up within a few
+seconds.
 
-Hover it and it springs open into `−  count  +`. **Reset** asks before it clears.
+## What's in it
 
-- Count survives relaunches (`UserDefaults`).
-- No Dock icon, no menu bar item, no permissions, no network. ~100 KB.
-- Right-click the notch to quit.
-- Works on Macs without a notch too — it falls back to a 200×32 strip at the top centre.
+- **Kanban** — Backlog / In Progress / Done. Drag a card between columns, or use
+  the arrows that appear on hover.
+- **Star anything important** — starred cards sort to the top of their column and
+  get a gold edge. No separate bucket to keep in sync.
+- **Assign to a teammate** — click the avatar on a card.
+- **Outreach counter** — per person, per day. `+` / `−` on the right, with a
+  confirmation before reset. The panel also shows the team's total for the day.
+- **Accounts** — email and a 4-digit PIN. Anyone can create one.
+
+Everything lives in Postgres (a free Neon database works well). The count is
+keyed by date, so it starts fresh each morning on its own — the Reset button is
+there for when you miscount.
+
+## Setup
+
+**1. Make a database.** Any Postgres will do. On [Neon](https://neon.tech),
+create a project and copy the connection string — it looks like
+`postgresql://user:password@ep-something.region.aws.neon.tech/neondb?sslmode=require`.
+
+**2. Point the app at it.** Either paste the string into the setup screen the
+first time you hover the notch (it's stored in your login keychain), or drop it
+in a config file:
+
+```bash
+mkdir -p ~/.config/notch-counter
+echo '{ "databaseURL": "postgresql://..." }' > ~/.config/notch-counter/config.json
+```
+
+The app creates its tables (`nc_users`, `nc_tasks`, `nc_outreach`) on first
+connect — see [docs/schema.sql](docs/schema.sql).
+
+**3. Everyone else does the same.** Same connection string, their own account.
+
+### A word on the security model
+
+The app talks to Postgres directly, so **the connection string is the real
+credential** — anyone holding it has full read/write access to the board,
+whatever their PIN is. The 4-digit PIN only decides which name your cards get
+filed under; it is not a security boundary. That's a deliberate trade for a
+small team tool with nothing to deploy. Don't put anything sensitive on this
+board, and don't commit the connection string.
+
+If you outgrow that, put a small API in front of Neon and have the app talk to
+that instead — `Database.swift` is the only file that would change.
 
 ## Install
 
 Grab `NotchCounter.zip` from [Releases](../../releases), unzip, and drop
 `Notch Counter.app` in `/Applications`.
 
-The app is ad-hoc signed (no paid Apple Developer account), so macOS quarantines
-it on first launch. Clear that once:
+It's ad-hoc signed (no paid Apple Developer account), so macOS quarantines it on
+first launch. Clear that once:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Notch Counter.app"
 ```
 
-Or launch it, let Gatekeeper refuse, then go to **System Settings → Privacy &
-Security → Open Anyway**.
-
-Nothing appears in the Dock when it launches — the number just shows up next to
-the notch. To start it at login: **System Settings → General → Login Items → +**.
+Nothing appears in the Dock — the number just shows up next to the notch.
+To start it at login: **System Settings → General → Login Items → +**.
+Right-click the notch to quit.
 
 ## Build
 
@@ -58,35 +96,43 @@ cd notch-counter
 open "dist/Notch Counter.app"
 ```
 
-`build-app.sh` compiles, generates the icon, assembles the `.app`, ad-hoc signs
-it, and writes `dist/NotchCounter.zip` for sharing.
+To develop against a local database instead of Neon:
+
+```bash
+createdb notchboard_dev
+NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" ./.build/release/NotchCounter
+```
 
 ## How it works
 
 | File | What it does |
 | --- | --- |
-| [`Geometry.swift`](Sources/NotchCounter/Geometry.swift) | Reads the real notch bounds from `NSScreen.auxiliaryTopLeftArea` / `auxiliaryTopRightArea`, and lays out the idle and hovered shapes. |
+| [`Geometry.swift`](Sources/NotchCounter/Geometry.swift) | Reads the real notch bounds from `NSScreen.auxiliaryTopLeftArea` / `auxiliaryTopRightArea`, and sizes the panel per state. |
 | [`NotchShape.swift`](Sources/NotchCounter/NotchShape.swift) | The silhouette — concave shoulders on top, rounded corners below. |
-| [`NotchView.swift`](Sources/NotchCounter/NotchView.swift) | SwiftUI: the number, the `− / +` buttons, the reset confirmation. |
 | [`NotchWindow.swift`](Sources/NotchCounter/NotchWindow.swift) | A borderless non-activating `NSPanel` pinned above the menu bar level. |
+| [`Database.swift`](Sources/NotchCounter/Database.swift) | Every query, over PostgresNIO. Swap this file to move behind an API. |
+| [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
+| [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the outreach rail. |
 | [`Tools/make-icon.swift`](Tools/make-icon.swift) | Draws `AppIcon.icns` from scratch with Core Graphics. |
 
-Two details that matter:
+Details worth knowing if you're reading the code:
 
-**Clicks pass through.** The panel is as large as the *expanded* state at all
-times, so `PassthroughContainer.hitTest` returns `nil` for anything outside the
-currently visible shape. The rest of your menu bar keeps working normally.
+**Clicks pass through.** The panel is always as large as the biggest state, so
+`PassthroughContainer.hitTest` returns `nil` for anything outside the currently
+visible shape. The rest of your menu bar keeps working.
 
 **Hover is polled, not tracked.** An 80 ms poll of `NSEvent.mouseLocation` beats
-`NSTrackingArea` here: it works no matter which app is focused, and it doesn't
-flicker when the window resizes under the pointer.
+`NSTrackingArea` here: it works regardless of which app is focused, and it
+doesn't flicker when the window resizes under the pointer. Opening waits ~180 ms
+so a stray pointer doesn't drop the whole board on you; clicking into the panel
+pins it open until you press Esc or click away.
 
-## Tweaks
+**Writes are optimistic.** The UI updates immediately, the query goes out, and
+the next poll reconciles. Polling is every 3 s while the panel is open, 25 s
+while it's closed.
 
-In [`Geometry.swift`](Sources/NotchCounter/Geometry.swift):
-
-- `tail` — how far the idle shape reaches past the right of the notch (46pt).
-- `openSize` — size of the hovered panel.
+**`Menu` labels flatten custom backgrounds** on macOS, which ate the avatar
+colours — the assignee picker pops an `NSMenu` from a plain button instead.
 
 ## License
 

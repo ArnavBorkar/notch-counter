@@ -1,129 +1,70 @@
 import SwiftUI
 
-private let popSpring = Animation.spring(response: 0.33, dampingFraction: 0.78)
+private let popSpring = Animation.spring(response: 0.36, dampingFraction: 0.82)
 
 struct NotchView: View {
-    @ObservedObject var counter: Counter
+    @ObservedObject var app: AppState
     let geo: NotchGeometry
 
-    private var size: CGSize { counter.isOpen ? geo.openSize : geo.closedSize }
+    private var mode: PanelMode { app.panelMode }
+    private var size: CGSize { app.expanded ? geo.openSize(mode) : geo.closedSize }
 
     var body: some View {
         ZStack(alignment: .top) {
-            NotchShape()
+            NotchShape(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
                 .fill(Color.black)
-                .shadow(color: .black.opacity(counter.isOpen ? 0.5 : 0), radius: 12, y: 6)
+                .shadow(color: .black.opacity(app.expanded ? 0.55 : 0), radius: 18, y: 8)
             content
         }
         .frame(width: size.width, height: size.height)
-        .offset(x: geo.leadingOffset(open: counter.isOpen))
+        .offset(x: geo.leadingOffset(open: app.expanded, mode: mode))
         .frame(width: geo.windowSize.width, height: geo.windowSize.height, alignment: .topLeading)
-        .animation(popSpring, value: counter.isOpen)
-        .animation(popSpring, value: counter.confirmingReset)
+        .animation(popSpring, value: app.expanded)
+        .animation(popSpring, value: app.phase)
+        .animation(.easeOut(duration: 0.16), value: app.confirmingReset)
     }
 
     @ViewBuilder
     private var content: some View {
-        if counter.isOpen {
-            Group {
-                if counter.confirmingReset { resetConfirmation } else { controls }
-            }
-            .padding(.top, geo.notchHeight)      // stay clear of the camera housing
-            .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .top)))
+        if app.expanded {
+            expanded
+                .padding(.top, geo.notchHeight)      // stay clear of the camera housing
+                .transition(.opacity)
         } else {
-            // number sits in the strip to the right of the notch
-            HStack(spacing: 0) {
-                Color.clear.frame(width: Style.topFlare + geo.notchWidth)
-                Text("\(counter.value)")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText())
-                    .frame(width: geo.tail)
-                Spacer(minLength: 0)
-            }
-            .frame(height: geo.notchHeight)
-            .transition(.opacity)
+            idle
         }
     }
 
-    private var controls: some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 14) {
-                CircleButton(symbol: "minus") { counter.decrement() }
-                Text("\(counter.value)")
-                    .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText(value: Double(counter.value)))
-                    .frame(minWidth: 84)
-                CircleButton(symbol: "plus") { counter.increment() }
-            }
-            Button { counter.confirmingReset = true } label: {
-                Text("Reset")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.45))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 2)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.top, 4)
-    }
-
-    private var resetConfirmation: some View {
-        VStack(spacing: 8) {
-            Text("Reset counter to 0?")
-                .font(.system(size: 12.5, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.9))
-            HStack(spacing: 8) {
-                PillButton(title: "Cancel", tint: .white.opacity(0.14), fg: .white.opacity(0.85)) {
-                    counter.confirmingReset = false
-                }
-                PillButton(title: "Reset", tint: Color(red: 0.92, green: 0.25, blue: 0.24), fg: .white) {
-                    counter.reset()
-                }
-            }
-        }
-        .padding(.top, 8)
-    }
-}
-
-private struct CircleButton: View {
-    let symbol: String
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .bold))
+    /// Idle: today's number, tucked into the strip right of the notch.
+    private var idle: some View {
+        HStack(spacing: 0) {
+            Color.clear.frame(width: Style.topFlare + geo.notchWidth)
+            Text(app.me == nil ? "–" : "\(app.myCount)")
+                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(.white.opacity(hovering ? 0.26 : 0.13)))
+                .contentTransition(.numericText())
+                .frame(width: geo.tail)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .scaleEffect(hovering ? 1.06 : 1)
-        .animation(.spring(response: 0.2, dampingFraction: 0.6), value: hovering)
-        .onHover { hovering = $0 }
+        .frame(height: geo.notchHeight)
+        .transition(.opacity)
     }
-}
 
-private struct PillButton: View {
-    let title: String
-    let tint: Color
-    let fg: Color
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(fg)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(tint.opacity(hovering ? 1 : 0.82)))
+    @ViewBuilder
+    private var expanded: some View {
+        switch app.phase {
+        case .setup:
+            SetupView(app: app)
+        case .connecting:
+            StatusView(title: "Connecting…")
+        case .failed(let message):
+            StatusView(title: "Couldn't connect",
+                       detail: message,
+                       action: ("Change database", { app.forgetDatabase() }))
+        case .login:
+            LoginView(app: app)
+        case .board:
+            BoardView(app: app)
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
     }
 }

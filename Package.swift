@@ -4,7 +4,14 @@ import PackageDescription
 let package = Package(
     name: "NotchCounter",
     platforms: [.macOS(.v14)],
+    dependencies: [
+        .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.21.0"),
+    ],
     targets: [
-        .executableTarget(name: "NotchCounter", path: "Sources/NotchCounter")
+        .executableTarget(
+            name: "NotchCounter",
+            dependencies: [.product(name: "PostgresNIO", package: "postgres-nio")],
+            path: "Sources/NotchCounter"
+        )
     ]
 )

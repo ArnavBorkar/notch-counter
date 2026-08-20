@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Hosts the SwiftUI view but only accepts clicks that land on the visible notch shape,
-/// so the rest of the menu bar keeps working normally.
+/// so the rest of the menu bar keeps working.
 final class PassthroughContainer: NSView {
     var activeRect: NSRect = .zero
 
@@ -26,14 +26,21 @@ final class NotchPanel: NSPanel {
 
 @MainActor
 final class NotchWindowController {
-    private let counter: Counter
+    private let app: AppState
     private var geo: NotchGeometry
     private var panel: NotchPanel!
     private var container: PassthroughContainer!
     private var pollTimer: Timer?
+    private var monitors: [Any] = []
 
-    init(counter: Counter) {
-        self.counter = counter
+    /// Hover hysteresis — a full-size board shouldn't fly open on a stray pointer.
+    private var insideSince: Date?
+    private var outsideSince: Date?
+    private let openDelay: TimeInterval = 0.18
+    private let closeDelay: TimeInterval = 0.35
+
+    init(app: AppState) {
+        self.app = app
         self.geo = NotchGeometry.current()
         build()
         startTracking()
@@ -60,7 +67,7 @@ final class NotchWindowController {
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
 
         let container = PassthroughContainer(frame: NSRect(origin: .zero, size: geo.windowSize))
-        let hosting = NSHostingView(rootView: NotchView(counter: counter, geo: geo))
+        let hosting = NSHostingView(rootView: NotchView(app: app, geo: geo))
         hosting.frame = container.bounds
         hosting.autoresizingMask = [.width, .height]
         container.addSubview(hosting)
@@ -79,7 +86,7 @@ final class NotchWindowController {
         panel.setFrame(geo.windowFrame, display: true)
         container.frame = NSRect(origin: .zero, size: geo.windowSize)
         if let hosting = container.subviews.first as? NSHostingView<NotchView> {
-            hosting.rootView = NotchView(counter: counter, geo: geo)
+            hosting.rootView = NotchView(app: app, geo: geo)
             hosting.frame = container.bounds
         }
         updateActiveRect()
@@ -87,12 +94,19 @@ final class NotchWindowController {
 
     /// Clickable region, in container coordinates.
     private func updateActiveRect() {
-        let size = counter.isOpen ? geo.openSize : geo.closedSize
-        container.activeRect = NSRect(x: geo.leadingOffset(open: counter.isOpen),
+        let expanded = app.expanded
+        let size = expanded ? geo.openSize(app.panelMode) : geo.closedSize
+        container.activeRect = NSRect(x: geo.leadingOffset(open: expanded, mode: app.panelMode),
                                       y: geo.windowSize.height - size.height,
                                       width: size.width,
                                       height: size.height)
     }
+
+    private func currentShapeOnScreen() -> NSRect {
+        geo.shapeRectOnScreen(open: app.expanded, mode: app.panelMode)
+    }
+
+    // MARK: - Tracking
 
     private func startTracking() {
         let timer = Timer(timeInterval: 0.08, repeats: true) { [weak self] _ in
@@ -100,19 +114,77 @@ final class NotchWindowController {
         }
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
+
+        // Click inside pins the panel open (so it survives you reaching for the keyboard);
+        // click anywhere else lets it go.
+        let globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleClickOutside() }
+        }
+        if let globalMonitor { monitors.append(globalMonitor) }
+
+        let localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            MainActor.assumeIsolated { self?.pin() }
+            return event
+        }
+        if let localMonitor { monitors.append(localMonitor) }
+
+        let keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self, event.keyCode == 53 else { return event }   // esc
+            MainActor.assumeIsolated { self.unpin(closing: true) }
+            return nil
+        }
+        if let keyMonitor { monitors.append(keyMonitor) }
+    }
+
+    private func pin() {
+        guard app.expanded, !app.pinned else { return }
+        app.pinned = true
+        panel.makeKeyAndOrderFront(nil)
+        updateActiveRect()
+    }
+
+    private func handleClickOutside() {
+        guard app.pinned else { return }
+        let mouse = NSEvent.mouseLocation
+        guard !currentShapeOnScreen().contains(mouse) else { return }
+        unpin(closing: true)
+    }
+
+    private func unpin(closing: Bool) {
+        guard app.pinned || closing else { return }
+        app.pinned = false
+        app.confirmingReset = false
+        if closing, !currentShapeOnScreen().contains(NSEvent.mouseLocation) {
+            app.isOpen = false
+        }
+        NSApp.deactivate()
+        updateActiveRect()
     }
 
     private func updateHover() {
         let mouse = NSEvent.mouseLocation
-        var rect = geo.shapeRectOnScreen(open: counter.isOpen)
-        if counter.isOpen {
-            rect = rect.insetBy(dx: -10, dy: -10)   // grace area so it doesn't snap shut at the edges
-        }
+        let rect = app.expanded
+            ? currentShapeOnScreen().insetBy(dx: -12, dy: -12)   // grace so it doesn't snap shut at the edges
+            : geo.shapeRectOnScreen(open: false, mode: app.panelMode)
         let inside = rect.contains(mouse)
-        guard inside != counter.isOpen else { return }
+        let now = Date()
 
-        counter.isOpen = inside
-        if !inside { counter.confirmingReset = false }
-        updateActiveRect()
+        if inside {
+            outsideSince = nil
+            if insideSince == nil { insideSince = now }
+            if !app.isOpen, now.timeIntervalSince(insideSince ?? now) >= openDelay {
+                app.isOpen = true
+                updateActiveRect()
+            }
+        } else {
+            insideSince = nil
+            if app.pinned { return }
+            if outsideSince == nil { outsideSince = now }
+            if app.isOpen, now.timeIntervalSince(outsideSince ?? now) >= closeDelay {
+                app.isOpen = false
+                app.confirmingReset = false
+                updateActiveRect()
+            }
+        }
     }
 }
