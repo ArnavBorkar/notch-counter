@@ -224,6 +224,16 @@ struct TasksLeftRail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 5) {
+                Text("Day \(app.daysSinceStart)")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.8))
+                Text("since 15 Aug")
+                    .font(.system(size: 9.5, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .padding(.bottom, 8)
+
             Text("Tasks left today")
                 .font(.system(size: 10.5, weight: .medium, design: .rounded))
                 .foregroundStyle(Palette.dim)

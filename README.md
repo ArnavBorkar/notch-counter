@@ -13,9 +13,9 @@
   <img src="docs/idle.png" width="420" alt="Idle state">
 </p>
 
-Idle, it widens the notch both ways: tasks the team still owes on the left, how
-many people you've reached out to today on the right. It never reaches below the
-menu bar, so it can't cover anything in the app underneath.
+Idle, it widens the notch both ways: what day you're on since you started on the
+left, how many people you've reached out to today on the right. It never reaches
+below the menu bar, so it can't cover anything in the app underneath.
 
 Hover it and the whole board drops down. The board is shared — every person
 running the app against the same database sees the same cards, and changes show
@@ -37,12 +37,16 @@ outreach counter on the right.
 - **Assign to a teammate** — click the avatar on a card.
 - **Deleting asks first** — the card flips to a confirmation instead of
   vanishing under the pointer.
+- **Day counter** — days since 15 August in the notch, so the clock is always in
+  front of you. Override the date with `"countingSince": "2026-08-15"` in
+  config.json.
 - **Tasks left today** — the left rail counts everything not yet Done across the
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
   confirmation before reset. The panel also shows the team's total for the day.
-- **A nudge** — once a minute the idle number turns into a small angry face,
-  brows down, and glares at you until you get back to outreach.
+- **A nudge** — once a minute the notch catches fire on one side and scowls at
+  you on the other, until you get back to outreach.
+  <img src="docs/nudge-fire.png" width="34" align="center" alt="the flame">
   <img src="docs/nudge.png" width="52" align="center" alt="the nudge face">
   Turn it off by right-clicking the notch.
 - **Haptics on everything** — the panel lands with a double thunk, the counter

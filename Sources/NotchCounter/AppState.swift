@@ -18,6 +18,8 @@ final class AppState: ObservableObject {
     @Published var banner: String?
     /// The idle number is briefly a face, to pull your eye back to outreach.
     @Published var winking = false
+    /// …and the left one catches fire.
+    @Published var flaming = false
     @Published private(set) var nudgesEnabled = UserDefaults.standard.object(forKey: "nudges.enabled") as? Bool ?? true
 
     // Data
@@ -46,7 +48,7 @@ final class AppState: ObservableObject {
     func toggleNudges() {
         nudgesEnabled.toggle()
         UserDefaults.standard.set(nudgesEnabled, forKey: "nudges.enabled")
-        if !nudgesEnabled { winking = false }
+        if !nudgesEnabled { winking = false; flaming = false }
     }
 
     private func startNudging() {
@@ -57,9 +59,11 @@ final class AppState: ObservableObject {
                 guard let self, !Task.isCancelled else { return }
                 guard self.nudgesEnabled, !self.expanded, self.phase == .board else { continue }
                 self.winking = true
+                self.flaming = true
                 Haptics.nudge()
                 try? await Task.sleep(for: .seconds(2.6))
                 self.winking = false
+                self.flaming = false
             }
         }
     }
@@ -241,8 +245,15 @@ final class AppState: ObservableObject {
 
     var teamTotal: Int { teamCounts.values.reduce(0, +) }
 
-    /// What the team still owes today — mirrored in the notch, left of the camera.
+    /// What the team still owes today.
     var tasksLeft: Int { tasks.filter { $0.status != .done }.count }
+
+    /// Days on the clock — shown in the notch, left of the camera.
+    var daysSinceStart: Int {
+        let start = Config.countingSince()
+        let days = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
+        return max(0, days)
+    }
 
     func tasks(in status: TaskStatus) -> [BoardTask] {
         tasks.filter { $0.status == status }

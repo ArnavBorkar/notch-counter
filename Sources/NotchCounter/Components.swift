@@ -268,3 +268,73 @@ struct NudgeFace: View {
         withAnimation(.easeInOut(duration: 0.3)) { glare = 0 }
     }
 }
+
+/// Flame silhouette — a teardrop with a leaning tip.
+struct FlameShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var p = Path()
+        p.move(to: CGPoint(x: w * 0.5, y: h))
+        p.addCurve(to: CGPoint(x: w * 0.46, y: 0),
+                   control1: CGPoint(x: -w * 0.10, y: h * 0.66),
+                   control2: CGPoint(x: w * 0.30, y: h * 0.20))
+        p.addCurve(to: CGPoint(x: w * 0.5, y: h),
+                   control1: CGPoint(x: w * 0.66, y: h * 0.22),
+                   control2: CGPoint(x: w * 1.10, y: h * 0.62))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// The left-hand nudge: the day count briefly catches fire.
+struct FlameNudge: View {
+    @State private var rise: CGFloat = 0.35
+    @State private var flick: CGFloat = 1
+    @State private var sway: CGFloat = 0
+    @State private var coreFlick: CGFloat = 1
+
+    var body: some View {
+        ZStack {
+            FlameShape()
+                .fill(
+                    LinearGradient(colors: [Color(red: 1.0, green: 0.82, blue: 0.25),
+                                            Color(red: 0.98, green: 0.42, blue: 0.10),
+                                            Color(red: 0.90, green: 0.20, blue: 0.12)],
+                                   startPoint: .bottom, endPoint: .top)
+                )
+                .frame(width: 13, height: 19)
+                .scaleEffect(x: 1, y: flick, anchor: .bottom)
+                .rotationEffect(.degrees(sway), anchor: .bottom)
+
+            FlameShape()
+                .fill(Color(red: 1.0, green: 0.93, blue: 0.62))
+                .frame(width: 6, height: 8.5)
+                .offset(y: 5)
+                .scaleEffect(x: 1, y: coreFlick, anchor: .bottom)
+                .rotationEffect(.degrees(sway * 0.6), anchor: .bottom)
+        }
+        .scaleEffect(rise, anchor: .bottom)
+        .frame(height: 20)
+        .task { await burn() }
+    }
+
+    private func burn() async {
+        func pause(_ ms: UInt64) async { try? await Task.sleep(for: .milliseconds(ms)) }
+
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.55)) { rise = 1 }
+        await pause(200)
+
+        // flicker: the outer flame and the core breathe out of step
+        for step in 0..<7 {
+            withAnimation(.easeInOut(duration: 0.13)) {
+                flick = step.isMultiple(of: 2) ? 1.12 : 0.9
+                sway = step.isMultiple(of: 2) ? 5 : -5
+            }
+            withAnimation(.easeInOut(duration: 0.09)) {
+                coreFlick = step.isMultiple(of: 2) ? 0.82 : 1.15
+            }
+            await pause(140)
+        }
+        withAnimation(.easeInOut(duration: 0.14)) { flick = 1; sway = 0; coreFlick = 1 }
+    }
+}

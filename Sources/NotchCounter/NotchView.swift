@@ -41,11 +41,20 @@ struct NotchView: View {
         HStack(spacing: 0) {
             Color.clear.frame(width: Style.topFlare)
 
-            Text(app.me == nil ? "–" : "\(app.tasksLeft)")
-                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle(.white.opacity(0.82))
-                .contentTransition(.numericText())
-                .frame(width: geo.leadingTail)
+            Group {
+                if app.flaming {
+                    FlameNudge()
+                        .transition(.scale(scale: 0.5, anchor: .bottom).combined(with: .opacity))
+                } else {
+                    Text("\(app.daysSinceStart)")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.82))
+                        .contentTransition(.numericText())
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
+            }
+            .frame(width: geo.leadingTail)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: app.flaming)
 
             Color.clear.frame(width: geo.notchWidth)
 
