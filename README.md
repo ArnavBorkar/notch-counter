@@ -41,9 +41,9 @@ outreach counter on the right.
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
   confirmation before reset. The panel also shows the team's total for the day.
-- **A nudge** — once a minute the idle number turns into a face, blinks, and
-  smiles at you, so outreach doesn't quietly fall off the day.
-  <img src="docs/nudge.png" width="60" align="center" alt="the nudge face">
+- **A nudge** — once a minute the idle number turns into a small angry face,
+  brows down, and glares at you until you get back to outreach.
+  <img src="docs/nudge.png" width="52" align="center" alt="the nudge face">
   Turn it off by right-clicking the notch.
 - **Accounts** — email and a 4-digit PIN. Anyone can create one.
 

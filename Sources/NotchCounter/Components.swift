@@ -194,56 +194,77 @@ final class MenuHandler: NSObject {
     @objc func fire(_ sender: NSMenuItem) { action(sender.representedObject) }
 }
 
-/// The nudge: every so often the idle number turns into a little face, blinks,
-/// and smiles at you. Cheap way to catch your eye from the menu bar.
+/// The nudge: every so often the idle number turns into a small angry face —
+/// brows down, glaring, with a shake — so outreach doesn't quietly slip.
 struct NudgeFace: View {
-    @State private var blink = false
-    @State private var smile = false
-    @State private var glance: CGFloat = 0
+    @State private var brow: CGFloat = 0        // 0 flat, 1 slammed down
+    @State private var frown = false
+    @State private var squint = false
+    @State private var shake: CGFloat = 0
+    @State private var glare: CGFloat = 0
+
+    private let ink = Color(red: 0.98, green: 0.34, blue: 0.30)
 
     var body: some View {
-        VStack(spacing: 3.5) {
+        VStack(spacing: 2.6) {
+            HStack(spacing: 5.5) {
+                browShape(lean: 1)
+                browShape(lean: -1)
+            }
             HStack(spacing: 6.5) {
                 eye
                 eye
             }
-            .offset(x: glance)
+            .offset(x: glare)
 
             Path { path in
-                path.move(to: CGPoint(x: 0, y: 1))
-                path.addQuadCurve(to: CGPoint(x: 15, y: 1),
-                                  control: CGPoint(x: 7.5, y: smile ? 8 : 1.5))
+                path.move(to: CGPoint(x: 0, y: 6.5))
+                path.addQuadCurve(to: CGPoint(x: 14, y: 6.5),
+                                  control: CGPoint(x: 7, y: frown ? 0 : 5.5))
             }
-            .stroke(Color.white, style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
-            .frame(width: 15, height: 8)
+            .stroke(ink, style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            .frame(width: 14, height: 7)
         }
+        .offset(x: shake)
         .task { await perform() }
+    }
+
+    private func browShape(lean: Double) -> some View {
+        Capsule()
+            .fill(ink)
+            .frame(width: 7, height: 1.8)
+            .rotationEffect(.degrees(22 * lean * brow))
+            .offset(y: brow * 0.7)
     }
 
     private var eye: some View {
         Capsule()
-            .fill(Color.white)
-            .frame(width: 4.5, height: blink ? 1.2 : 5.5)
+            .fill(ink)
+            .frame(width: 4.5, height: squint ? 3 : 5.5)
     }
 
     private func perform() async {
         func pause(_ ms: UInt64) async { try? await Task.sleep(for: .milliseconds(ms)) }
 
-        await pause(180)
-        withAnimation(.easeOut(duration: 0.22)) { smile = true }
+        await pause(120)
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.6)) {
+            brow = 1; frown = true; squint = true
+        }
         await pause(320)
-        withAnimation(.easeInOut(duration: 0.09)) { blink = true }
-        await pause(90)
-        withAnimation(.easeInOut(duration: 0.09)) { blink = false }
-        await pause(280)
-        withAnimation(.easeInOut(duration: 0.45)) { glance = 2.5 }
-        await pause(450)
-        withAnimation(.easeInOut(duration: 0.45)) { glance = -2.5 }
-        await pause(450)
-        withAnimation(.easeInOut(duration: 0.3)) { glance = 0 }
-        await pause(150)
-        withAnimation(.easeInOut(duration: 0.09)) { blink = true }
-        await pause(90)
-        withAnimation(.easeInOut(duration: 0.09)) { blink = false }
+
+        for _ in 0..<3 {                                  // seething
+            withAnimation(.easeInOut(duration: 0.07)) { shake = 1.8 }
+            await pause(70)
+            withAnimation(.easeInOut(duration: 0.07)) { shake = -1.8 }
+            await pause(70)
+        }
+        withAnimation(.easeInOut(duration: 0.08)) { shake = 0 }
+        await pause(360)
+
+        withAnimation(.easeInOut(duration: 0.4)) { glare = 2 }   // glaring at you
+        await pause(420)
+        withAnimation(.easeInOut(duration: 0.4)) { glare = -2 }
+        await pause(420)
+        withAnimation(.easeInOut(duration: 0.3)) { glare = 0 }
     }
 }
