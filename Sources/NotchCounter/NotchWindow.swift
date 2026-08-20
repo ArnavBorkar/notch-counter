@@ -55,6 +55,7 @@ final class NotchWindowController {
     private var panel: NotchPanel!
     private var container: PassthroughContainer!
     private var pollTimer: Timer?
+    private var menuBar: MenuBarItem?
     private var monitors: [Any] = []
 
     /// Hover hysteresis — a full-size board shouldn't fly open on a stray pointer.
@@ -68,6 +69,7 @@ final class NotchWindowController {
         self.geo = NotchGeometry.current()
         build()
         startTracking()
+        menuBar = MenuBarItem(app: app) { [weak self] in self?.openFromMenu() }
 
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -160,6 +162,16 @@ final class NotchWindowController {
             return nil
         }
         if let keyMonitor { monitors.append(keyMonitor) }
+    }
+
+    /// "Open board" from the menu bar — pin it so it stays put.
+    private func openFromMenu() {
+        app.isOpen = true
+        app.pinned = true
+        app.panelDidOpen()
+        Haptics.expand()
+        panel.makeKeyAndOrderFront(nil)
+        updateActiveRect()
     }
 
     private func pin() {

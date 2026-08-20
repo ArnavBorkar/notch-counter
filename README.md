@@ -53,6 +53,8 @@ outreach counter on the right.
   ticks, moving a card gives a rising pair, deleting buzzes twice, and the nudge
   stutters. macOS only exposes three feedback patterns, so the character comes
   from how they're sequenced. Right-click the notch to turn them off.
+- **A menu bar item** — open the board, refresh, toggle the nudge and haptics,
+  log out, restart, or quit, without going near the notch.
 - **Accounts** — email and a 4-digit PIN. Anyone can create one.
 
 Everything lives in Postgres (a free Neon database works well). The count is
@@ -103,9 +105,10 @@ first launch. Clear that once:
 xattr -dr com.apple.quarantine "/Applications/Notch Counter.app"
 ```
 
-Nothing appears in the Dock — the number just shows up next to the notch.
+Nothing appears in the Dock. There's a menu bar item — a small notch glyph —
+with Open board, Refresh, the nudge and haptics toggles, Log out, Restart, and
+Quit. Right-clicking the notch itself gets you a shorter version of the same.
 To start it at login: **System Settings → General → Login Items → +**.
-Right-click the notch to quit.
 
 ## Build
 
@@ -135,6 +138,7 @@ NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" 
 | [`Database.swift`](Sources/NotchCounter/Database.swift) | Every query, over PostgresNIO. Swap this file to move behind an API. |
 | [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
 | [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the outreach rail. |
+| [`MenuBarItem.swift`](Sources/NotchCounter/MenuBarItem.swift) | The status item and its menu, including the relaunch-after-exit restart. |
 | [`Haptics.swift`](Sources/NotchCounter/Haptics.swift) | Every buzz, and the sequences that give each action its own feel. |
 | [`Tools/make-icon.swift`](Tools/make-icon.swift) | Draws `AppIcon.icns` from scratch with Core Graphics. |
 
