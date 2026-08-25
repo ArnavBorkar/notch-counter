@@ -64,7 +64,7 @@ final class Database: @unchecked Sendable {
         )
         // Neon's free tier is connection-shy; keep the pool small.
         config.options.minimumConnections = 0
-        config.options.maximumConnections = 4
+        config.options.maximumConnections = 6
         return config
     }
 
@@ -185,27 +185,22 @@ final class Database: @unchecked Sendable {
         return out
     }
 
-    private func nextPosition(in status: TaskStatus) async throws -> Double {
-        let rows = try await client.query("""
-            select coalesce(max(position), 0) + 1 from nc_tasks where status = \(status.rawValue)
-            """)
-        for try await value in rows.decode(Double.self) { return value }
-        return 1
-    }
-
     func addTask(title: String, status: TaskStatus, assignee: UUID?, createdBy: UUID) async throws {
-        let position = try await nextPosition(in: status)
         try await client.query("""
             insert into nc_tasks (title, status, assignee_id, position, created_by)
-            values (\(title), \(status.rawValue), \(assignee), \(position), \(createdBy))
+            values (\(title), \(status.rawValue), \(assignee),
+                    (select coalesce(max(position), 0) + 1 from nc_tasks where status = \(status.rawValue)),
+                    \(createdBy))
             """)
     }
 
     func move(_ id: UUID, to status: TaskStatus) async throws {
-        let position = try await nextPosition(in: status)
         try await client.query("""
-            update nc_tasks set status = \(status.rawValue), position = \(position), updated_at = now()
-            where id = \(id)
+            update nc_tasks
+               set status = \(status.rawValue),
+                   position = (select coalesce(max(position), 0) + 1 from nc_tasks where status = \(status.rawValue)),
+                   updated_at = now()
+             where id = \(id)
             """)
     }
 

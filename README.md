@@ -154,10 +154,17 @@ doesn't flicker when the window resizes under the pointer. Opening waits ~180 ms
 so a stray pointer doesn't drop the whole board on you; clicking into the panel
 pins it open until you press Esc or click away.
 
-**Writes are optimistic.** The UI updates immediately, the query goes out, and
-the next poll reconciles. Polling is every 3 s while the panel is open, 25 s
-while it's closed — and opening the panel forces a refresh, so a hover never
-shows you a board that's 25 s stale.
+**Writes are optimistic, and a poll can't undo them.** The UI updates
+immediately, the query goes out, and the next poll reconciles. Polling is every
+3 s while the panel is open, 25 s while it's closed — and opening the panel
+forces a refresh, so a hover never shows a board that's 25 s stale.
+
+The subtle part is that a fetch already in flight when you move a card was read
+*before* your move, so applying it would snap the card back until the write's
+own refresh arrived. `AppState` counts edits: a refresh records the count when
+it starts and drops its result if the count changed or a write is still in
+flight. Optimistic moves also take the position the server will give them, so
+the card doesn't reshuffle when the real row arrives.
 
 **Avatar colours are hashed from the UUID's bytes**, not `hashValue` — that one
 is seeded per process, so everyone would change colour on every launch and look

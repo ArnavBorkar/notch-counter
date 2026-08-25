@@ -32,6 +32,13 @@ final class AppState: ObservableObject {
     private var db: Database?
     private var poller: Task<Void, Never>?
     private var nudger: Task<Void, Never>?
+
+    /// Bumped on every local edit. A fetch that started before the current value
+    /// is stale by definition — it was read before the edit reached the server —
+    /// so its result is dropped rather than painted over what you just did.
+    private var edits = 0
+    private var writesInFlight = 0
+    private var lastUsersFetch = Date.distantPast
     private let sessionKey = "session.userID"
 
     var expanded: Bool { isOpen || pinned }
@@ -168,16 +175,34 @@ final class AppState: ObservableObject {
 
     func refresh() async {
         guard let db, let me else { return }
+        let seenEdits = edits
+
         do {
-            async let tasks = db.tasks()
-            async let users = db.users()
-            async let count = db.outreachCount(for: me.id)
-            async let team = db.teamOutreachToday()
-            self.tasks = try await tasks
-            self.users = try await users
-            self.myCount = try await count
-            self.teamCounts = try await team
-            if banner != nil { banner = nil }
+            // Two round trips, not four: today's counts come from one table read,
+            // and the roster only changes when someone signs up.
+            async let taskFetch = db.tasks()
+            async let teamFetch = db.teamOutreachToday()
+
+            var freshUsers: [BoardUser]?
+            if users.isEmpty || Date().timeIntervalSince(lastUsersFetch) > 60 {
+                freshUsers = try await db.users()
+            }
+            let freshTasks = try await taskFetch
+            let freshTeam = try await teamFetch
+
+            banner = nil
+
+            // Someone edited while this was in flight — their version is newer than
+            // ours. Drop it; the write's own refresh will bring the truth along.
+            guard edits == seenEdits, writesInFlight == 0 else { return }
+
+            tasks = freshTasks
+            teamCounts = freshTeam
+            myCount = freshTeam[me.id] ?? 0
+            if let freshUsers {
+                users = freshUsers
+                lastUsersFetch = Date()
+            }
         } catch {
             banner = "Offline — \(error.localizedDescription)"
         }
@@ -185,11 +210,16 @@ final class AppState: ObservableObject {
 
     // MARK: - Board actions (optimistic, then reconciled by the next refresh)
 
+    /// Where the server will put a card appended to this column.
+    private func nextLocalPosition(in status: TaskStatus) -> Double {
+        (tasks.filter { $0.status == status }.map(\.position).max() ?? 0) + 1
+    }
+
     func addTask(title: String, assignee: UUID?) {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty, let db, let me else { return }
         let optimistic = BoardTask(id: UUID(), title: title, status: .backlog, important: false,
-                                   assigneeID: assignee, position: .greatestFiniteMagnitude,
+                                   assigneeID: assignee, position: nextLocalPosition(in: .backlog),
                                    createdAt: Date())
         tasks.append(optimistic)
         Haptics.add()
@@ -198,7 +228,10 @@ final class AppState: ObservableObject {
 
     func move(_ task: BoardTask, to status: TaskStatus) {
         guard let db, status != task.status else { return }
-        if let i = tasks.firstIndex(where: { $0.id == task.id }) { tasks[i].status = status }
+        if let i = tasks.firstIndex(where: { $0.id == task.id }) {
+            tasks[i].status = status
+            tasks[i].position = nextLocalPosition(in: status)   // land where it'll settle
+        }
         Haptics.move()
         run { try await db.move(task.id, to: status) }
     }
@@ -270,14 +303,16 @@ final class AppState: ObservableObject {
     }
 
     private func run(_ work: @escaping () async throws -> Void) {
+        edits += 1
+        writesInFlight += 1
         Task {
             do {
                 try await work()
-                await refresh()
             } catch {
                 banner = error.localizedDescription
-                await refresh()
             }
+            writesInFlight -= 1
+            await refresh()
         }
     }
 }

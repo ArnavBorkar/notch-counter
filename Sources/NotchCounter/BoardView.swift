@@ -88,6 +88,7 @@ struct ColumnView: View {
                 VStack(spacing: 7) {
                     ForEach(items) { task in
                         TaskCard(app: app, task: task)
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     }
                     if items.isEmpty {
                         Text("Nothing here")
@@ -117,6 +118,7 @@ struct ColumnView: View {
             return true
         } isTargeted: { targeted = $0 }
         .animation(.easeOut(duration: 0.12), value: targeted)
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: items)
     }
 }
 
