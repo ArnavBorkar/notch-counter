@@ -22,6 +22,7 @@ struct NotchView: View {
         .frame(width: geo.windowSize.width, height: geo.windowSize.height, alignment: .topLeading)
         .animation(popSpring, value: app.expanded)
         .animation(popSpring, value: app.phase)
+        .animation(.easeOut(duration: 0.25), value: app.updateAvailable)
         .animation(.easeOut(duration: 0.16), value: app.confirmingReset)
     }
 
@@ -46,11 +47,19 @@ struct NotchView: View {
                     FlameNudge()
                         .transition(.scale(scale: 0.5, anchor: .bottom).combined(with: .opacity))
                 } else {
-                    Text("\(app.daysSinceStart)")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(.white.opacity(0.82))
-                        .contentTransition(.numericText())
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    HStack(spacing: 3.5) {
+                        if app.updateAvailable {
+                            Circle()
+                                .fill(Palette.accent)
+                                .frame(width: 5, height: 5)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                        Text("\(app.daysSinceStart)")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.82))
+                            .contentTransition(.numericText())
+                    }
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
             .frame(width: geo.leadingTail)

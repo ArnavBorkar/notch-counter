@@ -93,6 +93,26 @@ board, and don't commit the connection string.
 If you outgrow that, put a small API in front of Neon and have the app talk to
 that instead — `Database.swift` is the only file that would change.
 
+## Updates
+
+The app checks GitHub for a newer release on launch and every six hours. When
+there is one, a blue dot appears next to the day count in the notch and a banner
+offers it at the top of the board — **Install** downloads it, replaces the app in
+place, and relaunches. There's also **Check for updates** in the menu bar item.
+
+To publish one:
+
+```bash
+echo "2.2.0" > VERSION
+./release.sh "What changed."
+```
+
+`release.sh` refuses to publish if the tag already exists or if the version
+inside the built bundle doesn't match `VERSION` — a release whose bundle claims
+an older version than its tag would make every client update, come back looking
+old, and update again forever. The app also remembers the last tag it installed
+as a second line of defence.
+
 ## Install
 
 Grab `NotchCounter.zip` from [Releases](../../releases), unzip, and drop
@@ -138,6 +158,7 @@ NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" 
 | [`Database.swift`](Sources/NotchCounter/Database.swift) | Every query, over PostgresNIO. Swap this file to move behind an API. |
 | [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
 | [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the outreach rail. |
+| [`Updater.swift`](Sources/NotchCounter/Updater.swift) | Checks GitHub releases, downloads the zip, and swaps the bundle after this process exits. |
 | [`MenuBarItem.swift`](Sources/NotchCounter/MenuBarItem.swift) | The status item and its menu, including the relaunch-after-exit restart. |
 | [`Haptics.swift`](Sources/NotchCounter/Haptics.swift) | Every buzz, and the sequences that give each action its own feel. |
 | [`Tools/make-icon.swift`](Tools/make-icon.swift) | Draws `AppIcon.icns` from scratch with Core Graphics. |

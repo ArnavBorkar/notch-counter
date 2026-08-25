@@ -20,6 +20,10 @@ final class AppState: ObservableObject {
     @Published var winking = false
     /// …and the left one catches fire.
     @Published var flaming = false
+    @Published var update: AppRelease?
+    @Published var updateDismissed = false
+    @Published var updateFailure: String?
+    @Published var installingUpdate = false
     @Published private(set) var nudgesEnabled = UserDefaults.standard.object(forKey: "nudges.enabled") as? Bool ?? true
 
     // Data
@@ -32,6 +36,7 @@ final class AppState: ObservableObject {
     private var db: Database?
     private var poller: Task<Void, Never>?
     private var nudger: Task<Void, Never>?
+    private var updateChecker: Task<Void, Never>?
 
     /// Bumped on every local edit. A fetch that started before the current value
     /// is stale by definition — it was read before the edit reached the server —
@@ -50,7 +55,51 @@ final class AppState: ObservableObject {
             phase = .setup
         }
         startNudging()
+        startUpdateChecks()
     }
+
+    // MARK: - Updates
+
+    private func startUpdateChecks() {
+        updateChecker?.cancel()
+        updateChecker = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.checkForUpdate()
+                try? await Task.sleep(for: .seconds(6 * 60 * 60))
+            }
+        }
+    }
+
+    func checkForUpdate() async {
+        do {
+            if let release = try await Updater.check() {
+                if release != update { updateDismissed = false }
+                update = release
+            } else {
+                update = nil
+            }
+        } catch {
+            // a failed check is not worth interrupting anyone over
+        }
+    }
+
+    func installUpdate() {
+        guard let release = update, !installingUpdate else { return }
+        installingUpdate = true
+        updateFailure = nil
+        Task {
+            do {
+                Updater.installedTag = release.tag
+                try await Updater.install(release)
+                NSApp.terminate(nil)
+            } catch {
+                installingUpdate = false
+                updateFailure = error.localizedDescription
+            }
+        }
+    }
+
+    var updateAvailable: Bool { update != nil }
 
     func toggleNudges() {
         nudgesEnabled.toggle()

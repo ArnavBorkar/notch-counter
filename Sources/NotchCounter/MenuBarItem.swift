@@ -51,6 +51,15 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
             menu.addItem(item("Open panel", #selector(showBoard)))
         }
 
+        if let release = app.update {
+            menu.addItem(.separator())
+            let update = item(app.installingUpdate
+                              ? "Downloading \(release.version)…"
+                              : "Install version \(release.version)…", #selector(installUpdate))
+            update.isEnabled = !app.installingUpdate
+            menu.addItem(update)
+        }
+
         menu.addItem(.separator())
 
         let nudge = item("Nudge me every minute", #selector(flipNudges))
@@ -66,6 +75,7 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         if app.me != nil {
             menu.addItem(item("Log out", #selector(logOut)))
         }
+        menu.addItem(item("Check for updates", #selector(checkUpdates)))
         menu.addItem(item("Change database…", #selector(changeDatabase)))
         menu.addItem(item("Restart", #selector(restart)))
 
@@ -104,6 +114,10 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     }
 
     @objc private func logOut() { app.logOut() }
+
+    @objc private func installUpdate() { app.installUpdate() }
+
+    @objc private func checkUpdates() { Task { await app.checkForUpdate() } }
 
     @objc private func changeDatabase() { app.forgetDatabase() }
 

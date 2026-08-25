@@ -4,6 +4,7 @@
 set -e
 cd "$(dirname "$0")"
 
+VERSION=$(tr -d " \n" < VERSION)
 swift build -c release
 BIN=".build/release/NotchCounter"
 
@@ -19,7 +20,7 @@ if [ ! -f Resources/AppIcon.icns ]; then
 fi
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -30,8 +31,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>com.arnav.notchcounter</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
+    <key>CFBundleVersion</key><string>$VERSION</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
@@ -43,5 +44,5 @@ codesign --force --deep --sign - "$APP"
 # ditto (not Finder zip / `zip`) so the bundle + signature survive the round trip
 ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/NotchCounter.zip"
 
-echo "Built:  $APP"
+echo "Built:  $APP  (v$VERSION)"
 echo "Send:   dist/NotchCounter.zip"

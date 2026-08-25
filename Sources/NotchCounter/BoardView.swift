@@ -10,6 +10,7 @@ struct BoardView: View {
         HStack(alignment: .top, spacing: 14) {
             TasksLeftRail(app: app)
             VStack(alignment: .leading, spacing: 10) {
+                if app.update != nil, !app.updateDismissed { UpdateBanner(app: app) }
                 composer
                 HStack(alignment: .top, spacing: 10) {
                     ForEach(TaskStatus.allCases, id: \.self) { status in
@@ -387,5 +388,53 @@ struct OutreachRail: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(RoundedRectangle(cornerRadius: 14).fill(Palette.column))
+    }
+}
+
+
+/// Shown at the top of the board when a newer release is on GitHub.
+struct UpdateBanner: View {
+    @ObservedObject var app: AppState
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Palette.accent)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(app.installingUpdate
+                     ? "Downloading \(app.update?.version ?? "")…"
+                     : "Version \(app.update?.version ?? "") is available")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
+                if let failure = app.updateFailure {
+                    Text(failure)
+                        .font(.system(size: 10.5, design: .rounded))
+                        .foregroundStyle(Palette.danger)
+                        .lineLimit(1)
+                } else {
+                    Text(app.installingUpdate
+                         ? "The app will restart when it's done"
+                         : "You're on \(Updater.currentVersion)")
+                        .font(.system(size: 10.5, design: .rounded))
+                        .foregroundStyle(Palette.dim)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if app.installingUpdate {
+                ProgressView().controlSize(.small)
+            } else {
+                PillButton(title: "Later") { app.updateDismissed = true }
+                PillButton(title: app.updateFailure == nil ? "Install" : "Try again",
+                           tint: Palette.accent) { app.installUpdate() }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Palette.accent.opacity(0.13)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.accent.opacity(0.35), lineWidth: 1))
     }
 }
