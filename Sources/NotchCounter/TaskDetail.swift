@@ -11,7 +11,7 @@ struct TaskDetailView: View {
     @State private var saver: Task<Void, Never>?
     @State private var savedAt: Date?
     @State private var confirmingDelete = false
-    @FocusState private var detailsFocused: Bool
+    @StateObject private var formatter = RichTextController()
 
     init(app: AppState, task: BoardTask) {
         self.app = app
@@ -81,35 +81,36 @@ struct TaskDetailView: View {
 
     private var detailsEditor: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("Details")
-                .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                .foregroundStyle(Palette.dim)
-                .textCase(.uppercase)
-                .kerning(0.4)
+            HStack(spacing: 3) {
+                Text("Details")
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(Palette.dim)
+                    .textCase(.uppercase)
+                    .kerning(0.4)
+
+                Spacer(minLength: 12)
+
+                IconButton(symbol: "bold", size: 20) { formatter.bold() }
+                IconButton(symbol: "italic", size: 20) { formatter.italic() }
+                IconButton(symbol: "underline", size: 20) { formatter.underline() }
+                Rectangle().fill(Palette.hairline).frame(width: 1, height: 12).padding(.horizontal, 3)
+                IconButton(symbol: "list.bullet", size: 20) { formatter.bullet() }
+            }
 
             ZStack(alignment: .topLeading) {
-                if draftDetails.isEmpty && !detailsFocused {
+                if draftDetails.isEmpty {
                     Text("Notes, links, acceptance criteria — whatever the card needs.")
                         .font(.system(size: 12.5, design: .rounded))
                         .foregroundStyle(.white.opacity(0.22))
                         .padding(.top, 8)
-                        .padding(.leading, 9)
+                        .padding(.leading, 10)
                         .allowsHitTesting(false)
                 }
-                TextEditor(text: $draftDetails)
-                    .scrollContentBackground(.hidden)
-                    .font(.system(size: 12.5, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .focused($detailsFocused)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 4)
+                RichTextEditor(stored: $draftDetails, controller: formatter)
                     .onChange(of: draftDetails) { _, _ in scheduleSave() }
             }
             .background(RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.05)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 9)
-                    .stroke(detailsFocused ? Palette.accent.opacity(0.5) : Palette.hairline, lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Palette.hairline, lineWidth: 1))
             .frame(maxHeight: .infinity)
         }
     }
@@ -148,6 +149,10 @@ struct TaskDetailView: View {
                 PillButton(title: "Delete", tint: Palette.danger.opacity(0.5)) {
                     Haptics.warn()
                     confirmingDelete = true
+                }
+                PillButton(title: "Done", tint: Palette.accent) {
+                    Haptics.tick()
+                    close()
                 }
             }
         }

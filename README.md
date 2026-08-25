@@ -32,10 +32,14 @@ outreach counter on the right.
 
 - **Kanban** — Backlog / In Progress / Done. Drag a card between columns, or use
   the arrows that appear on hover.
-- **Card details** — click a card to open it: an editable title, a free-text body
-  for notes, links or acceptance criteria, plus status, assignee, star and
-  delete in one place. Edits autosave as you type, so Esc never loses work.
+- **Card details** — click a card to open it: an editable title, a formatted body
+  for notes, links or acceptance criteria, plus status, assignee, star, delete
+  and Done in one place. Edits autosave as you type, so leaving never loses work.
   Cards carrying details show a small ≡ mark on the board.
+- **Basic rich text** — bold, italic, underline and bullet lists, from the
+  toolbar or ⌘B / ⌘I / ⌘U. Return continues a bullet, and an empty bullet ends
+  the list. Bodies with formatting are stored as RTF; plain notes stay plain
+  text in the database so they're still readable straight out of psql.
 - **Star anything important** — starred cards sort to the top of their column and
   get a gold edge. No separate bucket to keep in sync.
 - **Assign to a teammate** — click the avatar on a card.
@@ -163,6 +167,7 @@ NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" 
 | [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
 | [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the two rails. |
 | [`TaskDetail.swift`](Sources/NotchCounter/TaskDetail.swift) | The opened card — title, details body, properties, autosave. |
+| [`RichText.swift`](Sources/NotchCounter/RichText.swift) | The formatted editor: trait toggling, bullets, ⌘B/I/U, and RTF round-tripping. |
 | [`Updater.swift`](Sources/NotchCounter/Updater.swift) | Checks GitHub releases, downloads the zip, and swaps the bundle after this process exits. |
 | [`MenuBarItem.swift`](Sources/NotchCounter/MenuBarItem.swift) | The status item and its menu, including the relaunch-after-exit restart. |
 | [`Haptics.swift`](Sources/NotchCounter/Haptics.swift) | Every buzz, and the sequences that give each action its own feel. |
