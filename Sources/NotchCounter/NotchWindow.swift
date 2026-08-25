@@ -158,7 +158,13 @@ final class NotchWindowController {
 
         let keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self, event.keyCode == 53 else { return event }   // esc
-            MainActor.assumeIsolated { self.unpin(closing: true) }
+            MainActor.assumeIsolated {
+                if self.app.openTaskID != nil {      // first esc closes the card
+                    self.app.openTaskID = nil
+                } else {
+                    self.unpin(closing: true)
+                }
+            }
             return nil
         }
         if let keyMonitor { monitors.append(keyMonitor) }

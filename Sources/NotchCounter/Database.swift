@@ -94,6 +94,9 @@ final class Database: @unchecked Sendable {
                 updated_at timestamptz not null default now()
             )
             """)
+        // added after the first release
+        try await client.query("alter table nc_tasks add column if not exists description text")
+
         try await client.query("""
             create table if not exists nc_outreach (
                 user_id uuid not null references nc_users(id) on delete cascade,
@@ -167,20 +170,22 @@ final class Database: @unchecked Sendable {
 
     func tasks() async throws -> [BoardTask] {
         let rows = try await client.query("""
-            select id, title, status, important, assignee_id, position, created_at
+            select id, title, status, important, assignee_id, position, created_at,
+                   coalesce(description, '')
             from nc_tasks
             order by important desc, position asc, created_at asc
             """)
         var out: [BoardTask] = []
-        for try await (id, title, status, important, assignee, position, created) in
-            rows.decode((UUID, String, String, Bool, UUID?, Double, Date).self) {
+        for try await (id, title, status, important, assignee, position, created, description) in
+            rows.decode((UUID, String, String, Bool, UUID?, Double, Date, String).self) {
             out.append(BoardTask(id: id,
                                  title: title,
                                  status: TaskStatus(rawValue: status) ?? .backlog,
                                  important: important,
                                  assigneeID: assignee,
                                  position: position,
-                                 createdAt: created))
+                                 createdAt: created,
+                                 description: description))
         }
         return out
     }
@@ -219,6 +224,12 @@ final class Database: @unchecked Sendable {
     func rename(_ id: UUID, to title: String) async throws {
         try await client.query("""
             update nc_tasks set title = \(title), updated_at = now() where id = \(id)
+            """)
+    }
+
+    func setDescription(_ id: UUID, to text: String) async throws {
+        try await client.query("""
+            update nc_tasks set description = \(text), updated_at = now() where id = \(id)
             """)
     }
 

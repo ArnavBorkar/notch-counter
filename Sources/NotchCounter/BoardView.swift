@@ -11,10 +11,17 @@ struct BoardView: View {
             TasksLeftRail(app: app)
             VStack(alignment: .leading, spacing: 10) {
                 if app.update != nil, !app.updateDismissed { UpdateBanner(app: app) }
-                composer
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(TaskStatus.allCases, id: \.self) { status in
-                        ColumnView(app: app, status: status)
+
+                if let open = app.openTask {
+                    TaskDetailView(app: app, task: open)
+                        .id(open.id)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                } else {
+                    composer
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(TaskStatus.allCases, id: \.self) { status in
+                            ColumnView(app: app, status: status)
+                        }
                     }
                 }
             }
@@ -23,6 +30,7 @@ struct BoardView: View {
         .padding(.horizontal, 18)
         .padding(.bottom, 16)
         .padding(.top, 10)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: app.openTaskID)
         .onAppear { draftAssignee = draftAssignee ?? app.me?.id }
     }
 
@@ -179,6 +187,11 @@ struct TaskCard: View {
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.tick()
+                    app.openTaskID = task.id
+                }
 
             HStack(spacing: 6) {
                 AssigneePicker(users: app.users, onPick: { app.assign(task, to: $0) }) {
@@ -191,7 +204,19 @@ struct TaskCard: View {
                     app.toggleImportant(task)
                 }
 
+                if task.hasDetails {
+                    Image(systemName: "text.alignleft")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.35))
+                }
+
                 Spacer(minLength: 0)
+
+                if hovering {
+                    IconButton(symbol: "arrow.up.left.and.arrow.down.right", size: 18) {
+                        app.openTaskID = task.id
+                    }
+                }
 
                 if hovering {
                     if let previous = task.status.previous {

@@ -32,6 +32,10 @@ outreach counter on the right.
 
 - **Kanban** — Backlog / In Progress / Done. Drag a card between columns, or use
   the arrows that appear on hover.
+- **Card details** — click a card to open it: an editable title, a free-text body
+  for notes, links or acceptance criteria, plus status, assignee, star and
+  delete in one place. Edits autosave as you type, so Esc never loses work.
+  Cards carrying details show a small ≡ mark on the board.
 - **Star anything important** — starred cards sort to the top of their column and
   get a gold edge. No separate bucket to keep in sync.
 - **Assign to a teammate** — click the avatar on a card.
@@ -157,7 +161,8 @@ NOTCH_DB_URL="postgresql://$USER@localhost:5432/notchboard_dev?sslmode=disable" 
 | [`NotchWindow.swift`](Sources/NotchCounter/NotchWindow.swift) | A borderless non-activating `NSPanel` pinned above the menu bar level. |
 | [`Database.swift`](Sources/NotchCounter/Database.swift) | Every query, over PostgresNIO. Swap this file to move behind an API. |
 | [`AppState.swift`](Sources/NotchCounter/AppState.swift) | One observable object: phase, session, board, polling, optimistic writes. |
-| [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the outreach rail. |
+| [`BoardView.swift`](Sources/NotchCounter/BoardView.swift) | Columns, cards, the two rails. |
+| [`TaskDetail.swift`](Sources/NotchCounter/TaskDetail.swift) | The opened card — title, details body, properties, autosave. |
 | [`Updater.swift`](Sources/NotchCounter/Updater.swift) | Checks GitHub releases, downloads the zip, and swaps the bundle after this process exits. |
 | [`MenuBarItem.swift`](Sources/NotchCounter/MenuBarItem.swift) | The status item and its menu, including the relaunch-after-exit restart. |
 | [`Haptics.swift`](Sources/NotchCounter/Haptics.swift) | Every buzz, and the sequences that give each action its own feel. |

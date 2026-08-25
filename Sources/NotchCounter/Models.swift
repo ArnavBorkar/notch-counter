@@ -48,4 +48,7 @@ struct BoardTask: Identifiable, Hashable, Sendable {
     var assigneeID: UUID?
     var position: Double
     var createdAt: Date
+    var description: String = ""
+
+    var hasDetails: Bool { !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }

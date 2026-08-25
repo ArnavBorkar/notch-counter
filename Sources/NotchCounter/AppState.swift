@@ -15,6 +15,8 @@ final class AppState: ObservableObject {
     @Published var isOpen = false          // pointer is over the notch
     @Published var pinned = false          // clicked into the panel — stays open
     @Published var confirmingReset = false
+    /// The card whose details are open, if any.
+    @Published var openTaskID: UUID?
     @Published var banner: String?
     /// The idle number is briefly a face, to pull your eye back to outreach.
     @Published var winking = false
@@ -299,9 +301,28 @@ final class AppState: ObservableObject {
         run { try await db.assign(task.id, to: user) }
     }
 
+    func rename(_ task: BoardTask, to title: String) {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let db, !title.isEmpty, title != task.title else { return }
+        if let i = tasks.firstIndex(where: { $0.id == task.id }) { tasks[i].title = title }
+        run { try await db.rename(task.id, to: title) }
+    }
+
+    func setDescription(_ task: BoardTask, to text: String) {
+        guard let db, text != task.description else { return }
+        if let i = tasks.firstIndex(where: { $0.id == task.id }) { tasks[i].description = text }
+        run { try await db.setDescription(task.id, to: text) }
+    }
+
+    var openTask: BoardTask? {
+        guard let openTaskID else { return nil }
+        return tasks.first { $0.id == openTaskID }
+    }
+
     func delete(_ task: BoardTask) {
         guard let db else { return }
         tasks.removeAll { $0.id == task.id }
+        if openTaskID == task.id { openTaskID = nil }
         Haptics.destroy()
         run { try await db.delete(task.id) }
     }
