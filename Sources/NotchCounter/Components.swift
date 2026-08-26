@@ -308,11 +308,16 @@ struct DayPulse: View {
     }
 }
 
-/// A slow band of colour travelling around the notch outline while it nudges —
-/// the Siri treatment, so the thing catches your eye without shouting.
+/// A short band of light crawling around the notch outline, like a snake — never
+/// the whole border at once. Drawn *behind* the black fill, so only the half of
+/// the stroke that falls outside the shape is visible and the interior stays
+/// pure black; otherwise the glow tints the black and the physical notch shows
+/// up as a darker rectangle inside it.
 struct NotchAura: View {
     var bottomRadius: CGFloat
-    @State private var angle: Double = 0
+    /// How much of the outline the snake covers, and how long a lap takes.
+    var length: CGFloat = 0.22
+    var lap: Double = 2.0
 
     private let band: [Color] = [
         Color(red: 0.30, green: 0.62, blue: 1.00),
@@ -324,21 +329,38 @@ struct NotchAura: View {
     ]
 
     var body: some View {
-        let sweep = AngularGradient(colors: band, center: .center, angle: .degrees(angle))
-        ZStack {
-            NotchShape(bottomRadius: bottomRadius)
-                .stroke(sweep, lineWidth: 7)
-                .blur(radius: 10)
-                .opacity(0.8)
-            NotchShape(bottomRadius: bottomRadius)
-                .stroke(sweep, lineWidth: 1.8)
-                .blur(radius: 1.4)
+        // TimelineView, not a repeatForever animation: the snake wraps past the
+        // end of the path and has to be drawn as two pieces, which needs the body
+        // re-evaluated each frame rather than one interpolated trim.
+        TimelineView(.animation) { context in
+            let elapsed = context.date.timeIntervalSinceReferenceDate
+            let head = CGFloat((elapsed / lap).truncatingRemainder(dividingBy: 1))
+            let tail = head + length
+
+            ZStack {
+                if tail <= 1 {
+                    snake(head, tail)
+                } else {
+                    snake(head, 1)
+                    snake(0, tail - 1)
+                }
+            }
         }
         .allowsHitTesting(false)
-        .onAppear {
-            withAnimation(.linear(duration: 4.5).repeatForever(autoreverses: false)) {
-                angle = 360
-            }
+    }
+
+    private func snake(_ from: CGFloat, _ to: CGFloat) -> some View {
+        let sweep = AngularGradient(colors: band, center: .center)
+        return ZStack {
+            NotchBorder(bottomRadius: bottomRadius)
+                .trim(from: from, to: to)
+                .stroke(sweep, style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                .blur(radius: 7)
+                .opacity(0.9)
+            NotchBorder(bottomRadius: bottomRadius)
+                .trim(from: from, to: to)
+                .stroke(sweep, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .blur(radius: 1.2)
         }
     }
 }

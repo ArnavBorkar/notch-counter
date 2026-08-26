@@ -34,3 +34,33 @@ struct NotchShape: Shape {
         return p
     }
 }
+
+
+/// The same silhouette with the top edge left open — the top runs along the very
+/// edge of the display where nothing is visible, so a light crawling the closed
+/// path would disappear for almost half of every lap.
+struct NotchBorder: Shape {
+    var topFlare: CGFloat = Style.topFlare
+    var bottomRadius: CGFloat = Style.bottomRadius
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        let flare = min(topFlare, w / 2)
+        let radius = min(bottomRadius, (w - 2 * flare) / 2, h)
+
+        var p = Path()
+        p.move(to: CGPoint(x: 0, y: 0))
+        p.addQuadCurve(to: CGPoint(x: flare, y: flare),
+                       control: CGPoint(x: flare, y: 0))
+        p.addLine(to: CGPoint(x: flare, y: h - radius))
+        p.addQuadCurve(to: CGPoint(x: flare + radius, y: h),
+                       control: CGPoint(x: flare, y: h))
+        p.addLine(to: CGPoint(x: w - flare - radius, y: h))
+        p.addQuadCurve(to: CGPoint(x: w - flare, y: h - radius),
+                       control: CGPoint(x: w - flare, y: h))
+        p.addLine(to: CGPoint(x: w - flare, y: flare))
+        p.addQuadCurve(to: CGPoint(x: w, y: 0),
+                       control: CGPoint(x: w - flare, y: 0))
+        return p
+    }
+}

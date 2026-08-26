@@ -13,13 +13,15 @@ struct NotchView: View {
         ZStack(alignment: .top) {
             // No drop shadow: it bleeds past the rounded corners and reads as a
             // smudged band down each side over light windows.
-            NotchShape(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
-                .fill(Color.black)
-
-            if app.winking {
+            // aura underneath: the black fill masks its inner half, so the glow
+            // only ever spills outward and the notch interior stays black
+            if app.glowing {
                 NotchAura(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
                     .transition(.opacity)
             }
+
+            NotchShape(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
+                .fill(Color.black)
             content
         }
         .frame(width: size.width, height: size.height)
@@ -29,6 +31,7 @@ struct NotchView: View {
         .animation(popSpring, value: app.phase)
         .animation(.easeOut(duration: 0.25), value: app.updateAvailable)
         .animation(.easeInOut(duration: 0.5), value: app.winking)
+        .animation(.easeInOut(duration: 0.45), value: app.glowing)
         .animation(.easeOut(duration: 0.16), value: app.confirmingReset)
     }
 

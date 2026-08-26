@@ -56,8 +56,10 @@ outreach counter on the right.
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
   confirmation before reset. The panel also shows the team's total for the day.
-- **A nudge** — every eight minutes the notch scowls at you, warms the day count
-  with a couple of slow rings, and runs a band of colour around its outline.
+- **A nudge** — every eight minutes a short band of light crawls around the
+  notch outline, then the face scowls, then the day count warms and pings. The
+  glow is drawn behind the black fill, so it only ever spills outward and the
+  interior stays pure black.
   <img src="docs/nudge-fire.png" width="34" align="center" alt="the flame">
   <img src="docs/nudge.png" width="52" align="center" alt="the nudge face">
   Turn it off by right-clicking the notch.

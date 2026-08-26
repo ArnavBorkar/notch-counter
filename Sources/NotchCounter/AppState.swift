@@ -20,8 +20,10 @@ final class AppState: ObservableObject {
     @Published var banner: String?
     /// The idle number is briefly a face, to pull your eye back to outreach.
     @Published var winking = false
-    /// …and the left one catches fire.
+    /// …the left one warms and pings.
     @Published var pulsing = false
+    /// The band of light crawling round the outline.
+    @Published var glowing = false
     @Published var update: AppRelease?
     @Published var updateDismissed = false
     @Published var updateFailure: String?
@@ -106,7 +108,7 @@ final class AppState: ObservableObject {
     func toggleNudges() {
         nudgesEnabled.toggle()
         UserDefaults.standard.set(nudgesEnabled, forKey: "nudges.enabled")
-        if !nudgesEnabled { winking = false; pulsing = false }
+        if !nudgesEnabled { winking = false; pulsing = false; glowing = false }
     }
 
     private func startNudging() {
@@ -116,12 +118,20 @@ final class AppState: ObservableObject {
                 try? await Task.sleep(for: .seconds(8 * 60))
                 guard let self, !Task.isCancelled else { return }
                 guard self.nudgesEnabled, !self.expanded, self.phase == .board else { continue }
+                // staggered: the outline lights first, then the face, then the day
+                self.glowing = true
+                try? await Task.sleep(for: .milliseconds(900))
+                guard !Task.isCancelled else { return }
                 self.winking = true
-                self.pulsing = true
                 Haptics.nudge()
-                try? await Task.sleep(for: .seconds(2.6))
+                try? await Task.sleep(for: .milliseconds(700))
+                self.pulsing = true
+
+                try? await Task.sleep(for: .seconds(3))
                 self.winking = false
                 self.pulsing = false
+                try? await Task.sleep(for: .milliseconds(600))
+                self.glowing = false
             }
         }
     }
