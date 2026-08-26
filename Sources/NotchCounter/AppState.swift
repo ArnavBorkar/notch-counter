@@ -21,7 +21,7 @@ final class AppState: ObservableObject {
     /// The idle number is briefly a face, to pull your eye back to outreach.
     @Published var winking = false
     /// …and the left one catches fire.
-    @Published var flaming = false
+    @Published var pulsing = false
     @Published var update: AppRelease?
     @Published var updateDismissed = false
     @Published var updateFailure: String?
@@ -106,22 +106,22 @@ final class AppState: ObservableObject {
     func toggleNudges() {
         nudgesEnabled.toggle()
         UserDefaults.standard.set(nudgesEnabled, forKey: "nudges.enabled")
-        if !nudgesEnabled { winking = false; flaming = false }
+        if !nudgesEnabled { winking = false; pulsing = false }
     }
 
     private func startNudging() {
         nudger?.cancel()
         nudger = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
+                try? await Task.sleep(for: .seconds(8 * 60))
                 guard let self, !Task.isCancelled else { return }
                 guard self.nudgesEnabled, !self.expanded, self.phase == .board else { continue }
                 self.winking = true
-                self.flaming = true
+                self.pulsing = true
                 Haptics.nudge()
                 try? await Task.sleep(for: .seconds(2.6))
                 self.winking = false
-                self.flaming = false
+                self.pulsing = false
             }
         }
     }
@@ -278,13 +278,33 @@ final class AppState: ObservableObject {
     }
 
     func move(_ task: BoardTask, to status: TaskStatus) {
-        guard let db, status != task.status else { return }
+        guard status != task.status else { return }
+        move(task, to: status, above: nil)
+    }
+
+    /// Drop `task` directly above `target` — or at the bottom when target is nil.
+    /// Positions are midpoints between neighbours, so only the dragged row is written.
+    func move(_ task: BoardTask, to status: TaskStatus, above target: BoardTask?) {
+        guard let db else { return }
+        let siblings = tasks(in: status).filter { $0.id != task.id }
+
+        let position: Double
+        if let target, let index = siblings.firstIndex(where: { $0.id == target.id }) {
+            let below = target.position
+            let above = index > 0 ? siblings[index - 1].position : below - 2
+            position = (above + below) / 2
+        } else {
+            position = (siblings.map(\.position).max() ?? 0) + 1
+        }
+
+        guard status != task.status || position != task.position else { return }
+
         if let i = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[i].status = status
-            tasks[i].position = nextLocalPosition(in: status)   // land where it'll settle
+            tasks[i].position = position
         }
         Haptics.move()
-        run { try await db.move(task.id, to: status) }
+        run { try await db.reposition(task.id, status: status, position: position) }
     }
 
     func toggleImportant(_ task: BoardTask) {

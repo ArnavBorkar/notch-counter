@@ -17,7 +17,7 @@ final class PassthroughContainer: NSView {
 
     override func rightMouseDown(with event: NSEvent) {
         let menu = NSMenu()
-        let nudge = NSMenuItem(title: "Nudge me every minute",
+        let nudge = NSMenuItem(title: "Nudge me every 8 minutes",
                                action: #selector(flipNudges), keyEquivalent: "")
         nudge.target = self
         nudge.state = nudgesEnabled() ? .on : .off

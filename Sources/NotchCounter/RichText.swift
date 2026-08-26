@@ -4,7 +4,7 @@ import AppKit
 /// otherwise — so an unformatted note still reads normally straight out of psql,
 /// and an empty editor stores "" rather than an empty RTF document.
 enum RichText {
-    static let bodyFont = NSFont.systemFont(ofSize: 12.5)
+    static let bodyFont = NSFont.systemFont(ofSize: 14)
     static let ink = NSColor(white: 0.92, alpha: 1)
 
     static var base: [NSAttributedString.Key: Any] {
@@ -227,6 +227,22 @@ struct RichTextEditor: NSViewRepresentable {
             let value = RichText.stored(from: storage)
             lastEmitted = value
             parent.stored = value
+        }
+
+        /// Typing "- " or "* " at the start of a line turns it into a bullet.
+        func textView(_ textView: NSTextView, shouldChangeTextIn range: NSRange,
+                      replacementString text: String?) -> Bool {
+            guard text == " " else { return true }
+            let content = textView.string as NSString
+            let paragraph = content.paragraphRange(for: range)
+            let typedSoFar = NSRange(location: paragraph.location,
+                                     length: range.location - paragraph.location)
+            guard typedSoFar.length > 0 else { return true }
+            let prefix = content.substring(with: typedSoFar)
+            guard prefix == "-" || prefix == "*" else { return true }
+
+            textView.insertText("• ", replacementRange: typedSoFar)
+            return false          // we already consumed the space
         }
 
         /// Return inside a bullet continues the list; Return on an empty bullet ends it.

@@ -209,6 +209,15 @@ final class Database: @unchecked Sendable {
             """)
     }
 
+    /// Explicit placement, for drag-to-reorder.
+    func reposition(_ id: UUID, status: TaskStatus, position: Double) async throws {
+        try await client.query("""
+            update nc_tasks
+               set status = \(status.rawValue), position = \(position), updated_at = now()
+             where id = \(id)
+            """)
+    }
+
     func setImportant(_ id: UUID, _ important: Bool) async throws {
         try await client.query("""
             update nc_tasks set important = \(important), updated_at = now() where id = \(id)

@@ -269,72 +269,76 @@ struct NudgeFace: View {
     }
 }
 
-/// Flame silhouette — a teardrop with a leaning tip.
-struct FlameShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height
-        var p = Path()
-        p.move(to: CGPoint(x: w * 0.5, y: h))
-        p.addCurve(to: CGPoint(x: w * 0.46, y: 0),
-                   control1: CGPoint(x: -w * 0.10, y: h * 0.66),
-                   control2: CGPoint(x: w * 0.30, y: h * 0.20))
-        p.addCurve(to: CGPoint(x: w * 0.5, y: h),
-                   control1: CGPoint(x: w * 0.66, y: h * 0.22),
-                   control2: CGPoint(x: w * 1.10, y: h * 0.62))
-        p.closeSubpath()
-        return p
-    }
-}
+/// The left-hand nudge. A flame was too busy for something that fires on its
+/// own — this just warms the day count and sends two slow rings out.
+struct DayPulse: View {
+    let day: Int
 
-/// The left-hand nudge: the day count briefly catches fire.
-struct FlameNudge: View {
-    @State private var rise: CGFloat = 0.35
-    @State private var flick: CGFloat = 1
-    @State private var sway: CGFloat = 0
-    @State private var coreFlick: CGFloat = 1
+    @State private var ring: CGFloat = 0.55
+    @State private var ringOpacity: Double = 0
+    @State private var warm = false
+
+    private let amber = Color(red: 1.0, green: 0.66, blue: 0.28)
 
     var body: some View {
         ZStack {
-            FlameShape()
-                .fill(
-                    LinearGradient(colors: [Color(red: 1.0, green: 0.82, blue: 0.25),
-                                            Color(red: 0.98, green: 0.42, blue: 0.10),
-                                            Color(red: 0.90, green: 0.20, blue: 0.12)],
-                                   startPoint: .bottom, endPoint: .top)
-                )
-                .frame(width: 13, height: 19)
-                .scaleEffect(x: 1, y: flick, anchor: .bottom)
-                .rotationEffect(.degrees(sway), anchor: .bottom)
-
-            FlameShape()
-                .fill(Color(red: 1.0, green: 0.93, blue: 0.62))
-                .frame(width: 6, height: 8.5)
-                .offset(y: 5)
-                .scaleEffect(x: 1, y: coreFlick, anchor: .bottom)
-                .rotationEffect(.degrees(sway * 0.6), anchor: .bottom)
+            Circle()
+                .stroke(amber.opacity(ringOpacity), lineWidth: 1.2)
+                .frame(width: 20, height: 20)
+                .scaleEffect(ring)
+            Text("\(day)")
+                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(warm ? amber : .white.opacity(0.82))
         }
-        .scaleEffect(rise, anchor: .bottom)
-        .frame(height: 20)
-        .task { await burn() }
+        .task { await pulse() }
     }
 
-    private func burn() async {
-        func pause(_ ms: UInt64) async { try? await Task.sleep(for: .milliseconds(ms)) }
-
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.55)) { rise = 1 }
-        await pause(200)
-
-        // flicker: the outer flame and the core breathe out of step
-        for step in 0..<7 {
-            withAnimation(.easeInOut(duration: 0.13)) {
-                flick = step.isMultiple(of: 2) ? 1.12 : 0.9
-                sway = step.isMultiple(of: 2) ? 5 : -5
+    private func pulse() async {
+        withAnimation(.easeOut(duration: 0.45)) { warm = true }
+        for _ in 0..<2 {
+            ring = 0.55
+            ringOpacity = 0.7
+            withAnimation(.easeOut(duration: 1.3)) {
+                ring = 2.0
+                ringOpacity = 0
             }
-            withAnimation(.easeInOut(duration: 0.09)) {
-                coreFlick = step.isMultiple(of: 2) ? 0.82 : 1.15
-            }
-            await pause(140)
+            try? await Task.sleep(for: .milliseconds(1400))
         }
-        withAnimation(.easeInOut(duration: 0.14)) { flick = 1; sway = 0; coreFlick = 1 }
+        withAnimation(.easeInOut(duration: 0.6)) { warm = false }
+    }
+}
+
+/// A slow band of colour travelling around the notch outline while it nudges —
+/// the Siri treatment, so the thing catches your eye without shouting.
+struct NotchAura: View {
+    var bottomRadius: CGFloat
+    @State private var angle: Double = 0
+
+    private let band: [Color] = [
+        Color(red: 0.30, green: 0.62, blue: 1.00),
+        Color(red: 0.66, green: 0.40, blue: 1.00),
+        Color(red: 1.00, green: 0.35, blue: 0.62),
+        Color(red: 1.00, green: 0.58, blue: 0.30),
+        Color(red: 0.30, green: 0.85, blue: 0.80),
+        Color(red: 0.30, green: 0.62, blue: 1.00),
+    ]
+
+    var body: some View {
+        let sweep = AngularGradient(colors: band, center: .center, angle: .degrees(angle))
+        ZStack {
+            NotchShape(bottomRadius: bottomRadius)
+                .stroke(sweep, lineWidth: 7)
+                .blur(radius: 10)
+                .opacity(0.8)
+            NotchShape(bottomRadius: bottomRadius)
+                .stroke(sweep, lineWidth: 1.8)
+                .blur(radius: 1.4)
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.linear(duration: 4.5).repeatForever(autoreverses: false)) {
+                angle = 360
+            }
+        }
     }
 }

@@ -62,7 +62,7 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let nudge = item("Nudge me every minute", #selector(flipNudges))
+        let nudge = item("Nudge me every 8 minutes", #selector(flipNudges))
         nudge.state = app.nudgesEnabled ? .on : .off
         menu.addItem(nudge)
 

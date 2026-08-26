@@ -32,13 +32,17 @@ outreach counter on the right.
 
 - **Kanban** — Backlog / In Progress / Done. Drag a card between columns, or use
   the arrows that appear on hover.
+- **Drag to prioritise** — drop a card between two others to place it exactly
+  where you want in the stack. Only the dragged row is written: its position
+  becomes the midpoint between its new neighbours. Starred cards still float to
+  the top of their column, so manual order applies within each group.
 - **Card details** — click a card to open it: an editable title, a formatted body
   for notes, links or acceptance criteria, plus status, assignee, star, delete
   and Done in one place. Edits autosave as you type, so leaving never loses work.
   Cards carrying details show a small ≡ mark on the board.
 - **Basic rich text** — bold, italic, underline and bullet lists, from the
-  toolbar or ⌘B / ⌘I / ⌘U. Return continues a bullet, and an empty bullet ends
-  the list. Bodies with formatting are stored as RTF; plain notes stay plain
+  toolbar or ⌘B / ⌘I / ⌘U. Typing `- ` or `* ` at the start of a line turns it
+  into a bullet, Return continues the list, and an empty bullet ends it. Bodies with formatting are stored as RTF; plain notes stay plain
   text in the database so they're still readable straight out of psql.
 - **Star anything important** — starred cards sort to the top of their column and
   get a gold edge. No separate bucket to keep in sync.
@@ -52,8 +56,8 @@ outreach counter on the right.
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
   confirmation before reset. The panel also shows the team's total for the day.
-- **A nudge** — once a minute the notch catches fire on one side and scowls at
-  you on the other, until you get back to outreach.
+- **A nudge** — every eight minutes the notch scowls at you, warms the day count
+  with a couple of slow rings, and runs a band of colour around its outline.
   <img src="docs/nudge-fire.png" width="34" align="center" alt="the flame">
   <img src="docs/nudge.png" width="52" align="center" alt="the nudge face">
   Turn it off by right-clicking the notch.

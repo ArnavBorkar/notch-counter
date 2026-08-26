@@ -136,6 +136,7 @@ struct TaskCard: View {
     let task: BoardTask
     @State private var hovering = false
     @State private var confirmingDelete = false
+    @State private var insertAbove = false
 
     var body: some View {
         Group {
@@ -156,9 +157,25 @@ struct TaskCard: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(alignment: .top) {
+            if insertAbove {
+                Capsule()
+                    .fill(Palette.accent)
+                    .frame(height: 2.5)
+                    .offset(y: -5)
+            }
+        }
         .onHover { hovering = $0 }
         .draggable(task.id.uuidString)
+        .dropDestination(for: String.self) { payload, _ in
+            insertAbove = false
+            guard let raw = payload.first, let id = UUID(uuidString: raw), id != task.id,
+                  let dragged = app.tasks.first(where: { $0.id == id }) else { return false }
+            app.move(dragged, to: task.status, above: task)
+            return true
+        } isTargeted: { insertAbove = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(.easeOut(duration: 0.12), value: insertAbove)
         .animation(.easeOut(duration: 0.16), value: confirmingDelete)
     }
 
@@ -182,7 +199,7 @@ struct TaskCard: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(task.title)
-                .font(.system(size: 12.5, design: .rounded))
+                .font(.system(size: 13, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)

@@ -15,6 +15,11 @@ struct NotchView: View {
             // smudged band down each side over light windows.
             NotchShape(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
                 .fill(Color.black)
+
+            if app.winking {
+                NotchAura(bottomRadius: app.expanded ? Style.expandedRadius : Style.bottomRadius)
+                    .transition(.opacity)
+            }
             content
         }
         .frame(width: size.width, height: size.height)
@@ -23,6 +28,7 @@ struct NotchView: View {
         .animation(popSpring, value: app.expanded)
         .animation(popSpring, value: app.phase)
         .animation(.easeOut(duration: 0.25), value: app.updateAvailable)
+        .animation(.easeInOut(duration: 0.5), value: app.winking)
         .animation(.easeOut(duration: 0.16), value: app.confirmingReset)
     }
 
@@ -43,9 +49,9 @@ struct NotchView: View {
             Color.clear.frame(width: Style.topFlare)
 
             Group {
-                if app.flaming {
-                    FlameNudge()
-                        .transition(.scale(scale: 0.5, anchor: .bottom).combined(with: .opacity))
+                if app.pulsing {
+                    DayPulse(day: app.daysSinceStart)
+                        .transition(.opacity)
                 } else {
                     HStack(spacing: 3.5) {
                         if app.updateAvailable {
@@ -63,7 +69,7 @@ struct NotchView: View {
                 }
             }
             .frame(width: geo.leadingTail)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: app.flaming)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: app.pulsing)
 
             Color.clear.frame(width: geo.notchWidth)
 

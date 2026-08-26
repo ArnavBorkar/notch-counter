@@ -73,7 +73,7 @@ struct TaskDetailView: View {
     private var titleField: some View {
         TextField("Title", text: $draftTitle, axis: .vertical)
             .textFieldStyle(.plain)
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
+            .font(.system(size: 18, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
             .lineLimit(1...3)
             .onChange(of: draftTitle) { _, _ in scheduleSave() }
@@ -100,7 +100,7 @@ struct TaskDetailView: View {
             ZStack(alignment: .topLeading) {
                 if draftDetails.isEmpty {
                     Text("Notes, links, acceptance criteria — whatever the card needs.")
-                        .font(.system(size: 12.5, design: .rounded))
+                        .font(.system(size: 14, design: .rounded))
                         .foregroundStyle(.white.opacity(0.22))
                         .padding(.top, 8)
                         .padding(.leading, 10)
