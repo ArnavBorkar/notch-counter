@@ -10,7 +10,11 @@ struct BoardView: View {
         HStack(alignment: .top, spacing: 14) {
             TasksLeftRail(app: app)
             VStack(alignment: .leading, spacing: 10) {
-                if app.update != nil, !app.updateDismissed { UpdateBanner(app: app) }
+                if app.update != nil, !app.updateDismissed {
+                    UpdateBanner(app: app)
+                } else {
+                    updateCheckBar
+                }
 
                 if let open = app.openTask {
                     TaskDetailView(app: app, task: open)
@@ -32,6 +36,41 @@ struct BoardView: View {
         .padding(.top, 10)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: app.openTaskID)
         .onAppear { draftAssignee = draftAssignee ?? app.me?.id }
+    }
+
+    private var updateCheckBar: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+
+            if let message = app.updateCheckMessage {
+                Text(message)
+                    .font(.system(size: 10.5, design: .rounded))
+                    .foregroundStyle(Palette.dim)
+                    .lineLimit(1)
+            }
+
+            Button {
+                Task { await app.checkForUpdate(showFeedback: true) }
+            } label: {
+                HStack(spacing: 5) {
+                    if app.checkingForUpdate {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    Text(app.checkingForUpdate ? "Checking…" : "Check for updates")
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                }
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.06)))
+            }
+            .buttonStyle(.plain)
+            .disabled(app.checkingForUpdate)
+        }
+        .frame(height: 25)
     }
 
     private var composer: some View {

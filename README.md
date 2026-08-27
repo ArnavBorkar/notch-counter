@@ -55,7 +55,8 @@ outreach counter on the right.
 - **Tasks left today** — the left rail counts everything not yet Done across the
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
-  confirmation before reset. The panel also shows the team's total for the day.
+  confirmation before reset. Click the idle number beside the notch to add one
+  without opening the board. The panel also shows the team's total for the day.
 - **A nudge** — every eight minutes a short band of light crawls around the
   notch outline, then the face scowls, then the day count warms and pings. The
   glow is drawn behind the black fill, so it only ever spills outward and the
@@ -68,7 +69,8 @@ outreach counter on the right.
   stutters. macOS only exposes three feedback patterns, so the character comes
   from how they're sequenced. Right-click the notch to turn them off.
 - **A menu bar item** — open the board, refresh, toggle the nudge and haptics,
-  log out, restart, or quit, without going near the notch.
+  check for updates, log out, restart, or quit, without going near the notch.
+  The board also has a **Check for updates** button for an immediate check.
 - **Accounts** — email and a 4-digit PIN. Anyone can create one.
 
 Everything lives in Postgres (a free Neon database works well). The count is
@@ -154,6 +156,21 @@ cd notch-counter
 ./build-app.sh
 open "dist/Notch Counter.app"
 ```
+
+To test the update UI against the current GitHub release, make only the local
+`dist` bundle report an older version, then re-sign and launch it:
+
+```bash
+pkill -f "/Applications/Notch Counter.app/Contents/MacOS/NotchCounter" || true
+./build-app.sh
+plutil -replace CFBundleShortVersionString -string 0.0.0 "dist/Notch Counter.app/Contents/Info.plist"
+plutil -replace CFBundleVersion -string 0.0.0 "dist/Notch Counter.app/Contents/Info.plist"
+codesign --force --deep --sign - "dist/Notch Counter.app"
+open -n "dist/Notch Counter.app"
+```
+
+The **Check for updates** button will offer the current release. Installing it
+replaces this `dist` copy, not the app in `/Applications`.
 
 To develop against a local database instead of Neon:
 

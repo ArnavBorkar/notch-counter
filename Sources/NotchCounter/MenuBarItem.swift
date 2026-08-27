@@ -117,7 +117,7 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
 
     @objc private func installUpdate() { app.installUpdate() }
 
-    @objc private func checkUpdates() { Task { await app.checkForUpdate() } }
+    @objc private func checkUpdates() { Task { await app.checkForUpdate(showFeedback: true) } }
 
     @objc private func changeDatabase() { app.forgetDatabase() }
 

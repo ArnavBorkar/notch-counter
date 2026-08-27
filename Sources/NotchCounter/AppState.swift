@@ -28,6 +28,8 @@ final class AppState: ObservableObject {
     @Published var updateDismissed = false
     @Published var updateFailure: String?
     @Published var installingUpdate = false
+    @Published private(set) var checkingForUpdate = false
+    @Published private(set) var updateCheckMessage: String?
     @Published private(set) var nudgesEnabled = UserDefaults.standard.object(forKey: "nudges.enabled") as? Bool ?? true
 
     // Data
@@ -74,16 +76,31 @@ final class AppState: ObservableObject {
         }
     }
 
-    func checkForUpdate() async {
+    func checkForUpdate(showFeedback: Bool = false) async {
+        if showFeedback {
+            guard !checkingForUpdate else { return }
+            checkingForUpdate = true
+            updateCheckMessage = nil
+        }
+        defer {
+            if showFeedback { checkingForUpdate = false }
+        }
+
         do {
             if let release = try await Updater.check() {
-                if release != update { updateDismissed = false }
+                if release != update || showFeedback { updateDismissed = false }
                 update = release
             } else {
                 update = nil
+                if showFeedback {
+                    updateCheckMessage = "You're up to date — version \(Updater.currentVersion)"
+                }
             }
         } catch {
-            // a failed check is not worth interrupting anyone over
+            if showFeedback {
+                updateCheckMessage = "Couldn't check for updates"
+            }
+            // A failed automatic check is not worth interrupting anyone over.
         }
     }
 
@@ -91,6 +108,7 @@ final class AppState: ObservableObject {
         guard let release = update, !installingUpdate else { return }
         installingUpdate = true
         updateFailure = nil
+        updateCheckMessage = nil
         Task {
             do {
                 Updater.installedTag = release.tag

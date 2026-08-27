@@ -89,6 +89,8 @@ struct NotchView: View {
                 }
             }
             .frame(width: geo.tail)
+            .contentShape(Rectangle())
+            .onTapGesture { app.bump(1) }
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: app.winking)
 
             Spacer(minLength: 0)

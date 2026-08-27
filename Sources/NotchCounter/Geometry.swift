@@ -68,6 +68,16 @@ struct NotchGeometry {
         return NSRect(x: x, y: f.maxY - size.height, width: size.width, height: size.height)
     }
 
+    /// The idle outreach counter on the right of the physical notch. It has its
+    /// own interaction so hovering here does not open the board.
+    var outreachCounterRectOnScreen: NSRect {
+        let closed = shapeRectOnScreen(open: false, mode: .board)
+        return NSRect(x: closed.minX + Style.topFlare + leadingTail + notchWidth,
+                      y: closed.minY,
+                      width: tail,
+                      height: notchHeight)
+    }
+
     /// Window is big enough for every state; the shape is drawn inside it at the right offset.
     var windowFrame: NSRect {
         shapeRectOnScreen(open: false, mode: .board)
