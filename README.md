@@ -55,7 +55,8 @@ outreach counter on the right.
 - **Tasks left today** — the left rail counts everything not yet Done across the
   team, with the split per column and how many are on you.
 - **Outreach counter** — per person, per day. `+` / `−` on the right, with a
-  confirmation before reset. The panel also shows the team's total for the day.
+  confirmation before reset. Click the idle number beside the notch to add one
+  without opening the board. The panel also shows the team's total for the day.
 - **A nudge** — every eight minutes a short band of light crawls around the
   notch outline, then the face scowls, then the day count warms and pings. The
   glow is drawn behind the black fill, so it only ever spills outward and the

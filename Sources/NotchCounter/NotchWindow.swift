@@ -210,7 +210,8 @@ final class NotchWindowController {
         let rect = app.expanded
             ? currentShapeOnScreen().insetBy(dx: -12, dy: -12)   // grace so it doesn't snap shut at the edges
             : geo.shapeRectOnScreen(open: false, mode: app.panelMode)
-        let inside = rect.contains(mouse)
+        let overIdleCounter = !app.expanded && geo.outreachCounterRectOnScreen.contains(mouse)
+        let inside = rect.contains(mouse) && !overIdleCounter
         let now = Date()
 
         if inside {
